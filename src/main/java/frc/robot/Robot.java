@@ -36,10 +36,12 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotInit() {
+    // Inits the Joysticks
     leftStick = new Joystick(0);
     rightStick = new Joystick(1);
     controlPanel = new Joystick(2);
 
+    // Inits the Motors
     leftTop = new CANSparkMax(0, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
     leftMiddle = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
