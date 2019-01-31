@@ -1,10 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                        */
-/* Open Source Software - may be modified and shared by FRC teams. The code   */
-/* must be accompanied by the FIRST BSD license file in the root directory of */
-/* the project.                                                               */
-/*----------------------------------------------------------------------------*/
-
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -12,8 +5,17 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.UsbCamera;
 import edu.wpi.first.cameraserver.*;
+import edu.wpi.first.vision.VisionPipeline;
+import edu.wpi.first.vision.VisionThread;
+
 import com.revrobotics.*;
+
+import org.opencv.imgproc.Imgproc;
+import org.opencv.core.Rect;
+
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
 
@@ -42,6 +44,14 @@ public class Robot extends TimedRobot implements PIDOutput {
   private AHRS ahrs;
   private PIDController turnController;
   private double rotateToAngleRate;
+
+  // Camera
+  private UsbCamera camera = CameraServer.getInstance().startAutomaticCapture("intake",
+      "/dev/v4l/by-path/platform-ci_hdrc.0-usb-0:1.1:1.0-video-index0");
+  private CvSource intakeOutputStream;
+  private VisionThread gripPipeline;
+  private double centerX = 0.0;
+  private final Object imgLock = new Object();
 
   /* The following PID Controller coefficients will need to be tuned */
   /* to match the dynamics of your drive system. Note that the */
@@ -75,24 +85,24 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
 
-    System.out.println("EEENCODOODERS!!!");
-
-    // Inits Camera
-    CameraServer.getInstance().startAutomaticCapture();
-
     // Inits limit switch
     limitSwitchOne = new DigitalInput(1);
     limitSwitchTwo = new DigitalInput(2);
     limitSwitchThree = new DigitalInput(3);
 
+    // Inits Vision Pipeline
+    gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
+      if (!pipeline.filterContoursOutput().isEmpty()) {
+        Rect r = Imgproc.boundingRect(pipeline.filterContoursOutput().get(0));
+        synchronized (imgLock) {
+          centerX = r.x + (r.width / 2);
+        }
+      }
+    });
+    gripPipeline.start();
+
     // Inits Gyro
     try {
-      /* Communicate w/navX-MXP via the MXP SPI Bus. */
-      /* Alternatively: I2C.Port.kMXP, SerialPort.Port.kMXP or SerialPort.Port.kUSB */
-      /*
-       * See http://navx-mxp.kauailabs.com/guidance/selecting-an-interface/ for
-       * details.
-       */
       ahrs = new AHRS(SPI.Port.kMXP);
     } catch (RuntimeException ex) {
       System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
