@@ -9,11 +9,15 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PIDController;
+import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.cameraserver.*;
 import com.revrobotics.*;
+import com.kauailabs.navx.frc.AHRS;
+import edu.wpi.first.wpilibj.SPI;
 
-public class Robot extends TimedRobot {
+public class Robot extends TimedRobot implements PIDOutput {
 
   // Joysticks
   private Joystick leftStick;
@@ -34,6 +38,27 @@ public class Robot extends TimedRobot {
   private DigitalInput limitSwitchTwo;
   private DigitalInput limitSwitchThree;
 
+  // Gyro
+  private AHRS ahrs;
+  private PIDController turnController;
+  private double rotateToAngleRate;
+
+  /* The following PID Controller coefficients will need to be tuned */
+  /* to match the dynamics of your drive system. Note that the */
+  /* SmartDashboard in Test mode has support for helping you tune */
+  /* controllers by displaying a form where you can enter new P, I, */
+  /* and D constants and test the mechanism. */
+
+  static final double kP = 0.03;
+  static final double kI = 0.00;
+  static final double kD = 0.00;
+  static final double kF = 0.00;
+
+  /* This tuning parameter indicates how close to "on target" the */
+  /* PID Controller will attempt to get. */
+
+  static final double kToleranceDegrees = 2.0f;
+
   @Override
   public void robotInit() {
     // Inits the Joysticks
@@ -50,16 +75,46 @@ public class Robot extends TimedRobot {
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
 
+    System.out.println("EEENCODOODERS!!!");
+
+    // Inits Camera
     CameraServer.getInstance().startAutomaticCapture();
 
+    // Inits limit switch
     limitSwitchOne = new DigitalInput(1);
     limitSwitchTwo = new DigitalInput(2);
     limitSwitchThree = new DigitalInput(3);
+
+    // Inits Gyro
+    try {
+      /* Communicate w/navX-MXP via the MXP SPI Bus. */
+      /* Alternatively: I2C.Port.kMXP, SerialPort.Port.kMXP or SerialPort.Port.kUSB */
+      /*
+       * See http://navx-mxp.kauailabs.com/guidance/selecting-an-interface/ for
+       * details.
+       */
+      ahrs = new AHRS(SPI.Port.kMXP);
+    } catch (RuntimeException ex) {
+      System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
+    }
+
+    turnController = new PIDController(kP, kI, kD, kF, ahrs, this);
+    turnController.setInputRange(-180.0f, 180.0f);
+    turnController.setOutputRange(-1.0, 1.0);
+    turnController.setAbsoluteTolerance(kToleranceDegrees);
+    turnController.setContinuous(true);
   }
 
   @Override
   public void teleopPeriodic() {
     runRobot(leftStick.getY(), rightStick.getY());
+
+    if (controlPanel.getRawButton(3)) {
+      System.out.print("Button 3 is clicked.");
+      leftBottom.set(1);
+    } else {
+      leftBottom.set(0);
+    }
   }
 
   public void runRobot(double left, double right) {
@@ -113,5 +168,12 @@ public class Robot extends TimedRobot {
 
     return (Math.sin(Math.toRadians(arm_angle)) * (arm_length - elevator_width)) + (elevator_height - arm_width)
         + arm_width;
+  }
+
+  @Override
+  /* This function is invoked periodically by the PID Controller, */
+  /* based upon navX-MXP yaw angle input and PID Coefficients. */
+  public void pidWrite(double output) {
+    rotateToAngleRate = output;
   }
 }
