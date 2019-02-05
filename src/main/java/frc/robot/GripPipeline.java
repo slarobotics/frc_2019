@@ -33,6 +33,15 @@ public class GripPipeline implements VisionPipeline {
 	private ArrayList<MatOfPoint> findContoursOutput = new ArrayList<MatOfPoint>();
 	private ArrayList<MatOfPoint> filterContoursOutput = new ArrayList<MatOfPoint>();
 	private ArrayList<MatOfPoint> convexHullsOutput = new ArrayList<MatOfPoint>();
+	public Mat overlayOutput;
+
+	private double aspectRatioOut = 0.0;
+	private int contourNumber = 0;
+	private int pipelineRunning = 0;
+	private double targetAngle = 0.0;
+	private boolean foundTarget = false; // indicate whether you found the target
+	private int targetTop, targetBottom, targetLeft, targetRight, targetHeight, targetWidth;
+	private double targetDistance;
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -58,7 +67,7 @@ public class GripPipeline implements VisionPipeline {
 
 		// Step Filter_Contours0:
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
-		double filterContoursMinArea = 1000.0;
+		double filterContoursMinArea = 0.0;
 		double filterContoursMinPerimeter = 0.0;
 		double filterContoursMinWidth = 0.0;
 		double filterContoursMaxWidth = 1000;
@@ -80,7 +89,7 @@ public class GripPipeline implements VisionPipeline {
 		findTarget(convexHullsContours);
 	}
 
-	private void findTarget(List<MatOfPoint> inputContours) {
+	public void findTarget(List<MatOfPoint> inputContours) {
 		pipelineRunning++;
 		if (pipelineRunning > 1000) {
 			pipelineRunning = 0;
@@ -134,8 +143,16 @@ public class GripPipeline implements VisionPipeline {
 
 						targetAngle = 0.5934352563 * (distanceCenterTarget / 320);
 
+						System.out.println("Target Distance " + targetDistance);
+						System.out.println("Target Angle " + targetAngle);
+						System.out.println("Target Height " + targetHeight);
+						System.out.println("Target Width " + targetWidth);
+						System.out.println("Aspect Ratio " + aspectRatio);
+
 						if (Math.abs(aspectRatio - (6.0 / 8.0)) < 0.1) { // 8.0,16.0
 							foundTarget = true;
+
+							System.out.println("Found Target " + foundTarget);
 
 							Imgproc.rectangle(overlayOutput, new Point(targetLeft, targetTop),
 									new Point(targetRight, targetBottom), new Scalar(0, 0, 255));
