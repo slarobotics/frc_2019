@@ -1,3 +1,10 @@
+/*----------------------------------------------------------------------------*/
+/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                        */
+/* Open Source Software - may be modified and shared by FRC teams. The code   */
+/* must be accompanied by the FIRST BSD license file in the root directory of */
+/* the project.                                                               */
+/*----------------------------------------------------------------------------*/
+
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -25,6 +32,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   private Joystick leftStick;
   private Joystick rightStick;
   private Joystick controlPanel;
+  private Joystick elevStick;
 
   // Motors
   private CANSparkMax leftTop;
@@ -34,11 +42,6 @@ public class Robot extends TimedRobot implements PIDOutput {
   private CANSparkMax leftBottom;
   private CANSparkMax rightBottom;
   private CANSparkMax elevator;
-
-  // Limit Switches
-  private DigitalInput limitSwitchOne;
-  private DigitalInput limitSwitchTwo;
-  private DigitalInput limitSwitchThree;
 
   // Gyro
   private AHRS ahrs;
@@ -75,6 +78,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     leftStick = new Joystick(0);
     rightStick = new Joystick(1);
     controlPanel = new Joystick(2);
+    elevStick = new Joystick(3);
 
     // Inits the Motors
     leftTop = new CANSparkMax(0, CANSparkMaxLowLevel.MotorType.kBrushless);
@@ -84,11 +88,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     leftBottom = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
-
-    // Inits limit switch
-    limitSwitchOne = new DigitalInput(1);
-    limitSwitchTwo = new DigitalInput(2);
-    limitSwitchThree = new DigitalInput(3);
 
     // Inits Vision Pipeline
     gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
@@ -136,26 +135,12 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom.set(right);
   }
 
-  public void limitSwitches() {
-    // level one
-    if (limitSwitchOne.get() && limitSwitchTwo.get() == false && limitSwitchThree.get() == false) {
-      System.out.println("level one");
-    }
-    // level two
-    else if (limitSwitchOne.get() && limitSwitchTwo.get() && limitSwitchThree.get() == false) {
-      System.out.println("level two");
-    }
-    // level three
-    else if (limitSwitchOne.get() && limitSwitchTwo.get() && limitSwitchThree.get()) {
-      System.out.println("level three");
-    } else {
-      System.out.println("error");
-    }
-    controlPanel = new Joystick(0);
+  public void elevatorHeights() {
     // This is for the elevator up button
     if (controlPanel.getRawButton(2)) {
       System.out.println("up button");
       elevator.set(1);
+      System.out.println(elevator.getEncoder().getVelocity());
     }
     // This is for the elevator down button
     else if (controlPanel.getRawButton(3)) {
