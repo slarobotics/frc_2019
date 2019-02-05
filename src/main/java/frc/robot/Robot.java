@@ -46,11 +46,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   private double rotateToAngleRate;
 
   // Camera
-  /*
-   * private UsbCamera camera =
-   * CameraServer.getInstance().startAutomaticCapture("intake",
-   * "/dev/v4l/by-path/platform-ci_hdrc.0-usb-0:1.1:1.0-video-index0");
-   */
+
+  // private UsbCamera camera =
+  // CameraServer.getInstance().startAutomaticCapture("intake",
+  // "/dev/v4l/by-path/platform-ci_hdrc.0-usb-0:1.1:1.0-video-index0");
 
   private UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
   private CvSource outputStream;
@@ -100,32 +99,26 @@ public class Robot extends TimedRobot implements PIDOutput {
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
     camera.setResolution(320, 240);
 
-    gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
-      outputStream.putFrame(pipeline.overlayOutput);
-      if (!pipeline.convexHullsOutput().isEmpty()) {
-        System.out.println("Convex Hull was not empty");
-        Rect r = Imgproc.boundingRect(pipeline.convexHullsOutput().get(0));
-        pipeline.findTarget(pipeline.convexHullsOutput());
-        synchronized (imgLock) {
-          centerX = r.x + (r.width / 2);
-          System.out.println("Center X: " + centerX);
-        }
-      }
-    });
-    gripPipeline.start();
-
-    // Inits Gyro
-    try {
-      ahrs = new AHRS(SPI.Port.kMXP);
-    } catch (RuntimeException ex) {
-      System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
-    }
-
-    turnController = new PIDController(kP, kI, kD, kF, ahrs, this);
-    turnController.setInputRange(-180.0f, 180.0f);
-    turnController.setOutputRange(-1.0, 1.0);
-    turnController.setAbsoluteTolerance(kToleranceDegrees);
-    turnController.setContinuous(true);
+    /*
+     * gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
+     * outputStream.putFrame(pipeline.overlayOutput); if
+     * (!pipeline.convexHullsOutput().isEmpty()) {
+     * System.out.println("Convex Hull was not empty"); Rect r =
+     * Imgproc.boundingRect(pipeline.convexHullsOutput().get(0));
+     * pipeline.findTarget(pipeline.convexHullsOutput()); synchronized (imgLock) {
+     * centerX = r.x + (r.width / 2); System.out.println("Center X: " + centerX); }
+     * } }); gripPipeline.start();
+     * 
+     * // Inits Gyro try { ahrs = new AHRS(SPI.Port.kMXP); } catch (RuntimeException
+     * ex) { System.out.println("Error instantiating navX-MXP:  " +
+     * ex.getMessage()); }
+     * 
+     * turnController = new PIDController(kP, kI, kD, kF, ahrs, this);
+     * turnController.setInputRange(-180.0f, 180.0f);
+     * turnController.setOutputRange(-1.0, 1.0);
+     * turnController.setAbsoluteTolerance(kToleranceDegrees);
+     * turnController.setContinuous(true);
+     */
   }
 
   @Override
