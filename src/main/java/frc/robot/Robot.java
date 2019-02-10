@@ -8,6 +8,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
@@ -25,6 +26,7 @@ import org.opencv.core.Rect;
 
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Solenoid;
 
 public class Robot extends TimedRobot implements PIDOutput {
 
@@ -34,19 +36,32 @@ public class Robot extends TimedRobot implements PIDOutput {
   private Joystick controlPanel;
   private Joystick elevStick;
 
-  // Motors
+  // Drivetrain Motors
   private CANSparkMax leftTop;
   private CANSparkMax rightTop;
   private CANSparkMax leftMiddle;
   private CANSparkMax rightMiddle;
   private CANSparkMax leftBottom;
   private CANSparkMax rightBottom;
+
+  // Elevator Motors
   private CANSparkMax elevator;
+
+  // Gear Shift
+  DoubleSolenoid driveTrainShift = new DoubleSolenoid(0, 0, 1);
+
+  // Climber Pistons
+  private Solenoid frontClimb;
+  private Solenoid backClimb;
+
+  // Arm Pistons
+  private Solenoid armPiston;
 
   // Gyro
   private AHRS ahrs;
   private PIDController turnController;
   private double rotateToAngleRate;
+  private double targetAngle;
 
   // Camera
 
@@ -57,6 +72,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   private UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
   private CvSource outputStream;
   private VisionThread gripPipeline;
+  private VisionThread rectDraw;
   private double centerX = 0.0;
   private final Object imgLock = new Object();
 
@@ -76,6 +92,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   static final double kToleranceDegrees = 2.0f;
 
+  // Shifting Mode
+  public boolean shiftMode = false;
+
   @Override
   public void robotInit() {
     // Inits the Joysticks
@@ -89,39 +108,60 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
     leftMiddle = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightMiddle = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
-    leftBottom = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftBottom = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
-    elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
+    elevator = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
+
+    // Inits the solenoids
+    frontClimb = new Solenoid(0);
+    backClimb = new Solenoid(1);
+    armPiston = new Solenoid(2);
 
     // Inits Vision Pipeline
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
     camera.setResolution(320, 240);
 
-    /*
-     * gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
-     * outputStream.putFrame(pipeline.overlayOutput); if
-     * (!pipeline.convexHullsOutput().isEmpty()) {
-     * System.out.println("Convex Hull was not empty"); Rect r =
-     * Imgproc.boundingRect(pipeline.convexHullsOutput().get(0));
-     * pipeline.findTarget(pipeline.convexHullsOutput()); synchronized (imgLock) {
-     * centerX = r.x + (r.width / 2); System.out.println("Center X: " + centerX); }
-     * } }); gripPipeline.start();
-     * 
-     * // Inits Gyro try { ahrs = new AHRS(SPI.Port.kMXP); } catch (RuntimeException
-     * ex) { System.out.println("Error instantiating navX-MXP:  " +
-     * ex.getMessage()); }
-     * 
-     * turnController = new PIDController(kP, kI, kD, kF, ahrs, this);
-     * turnController.setInputRange(-180.0f, 180.0f);
-     * turnController.setOutputRange(-1.0, 1.0);
-     * turnController.setAbsoluteTolerance(kToleranceDegrees);
-     * turnController.setContinuous(true);
-     */
+    gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
+      // No point in drawling nothing is there.
+      if (!pipeline.filterContoursOutput().isEmpty()) {
+        // Puts overlay output on camera stream
+        outputStream.putFrame(pipeline.overlayOutput);
+        synchronized (imgLock) { // let us grab data from GripPipeline
+          targetAngle = pipeline.targetAngle;
+        }
+      }
+    });
+    gripPipeline.start();
+
+    // Inits Gyro
+
+    try {
+      ahrs = new AHRS(SPI.Port.kMXP);
+    } catch (RuntimeException ex) {
+      System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
+    }
+
+    turnController = new PIDController(kP, kI, kD, kF, ahrs, this);
+    turnController.setInputRange(-180.0f, 180.0f);
+    turnController.setOutputRange(-1.0, 1.0);
+    turnController.setAbsoluteTolerance(kToleranceDegrees);
+    turnController.setContinuous(true);
+
+    ahrs.zeroYaw();
   }
 
   @Override
   public void teleopPeriodic() {
-    runRobot(leftStick.getY(), rightStick.getY());
+    double scale = getDrivePowerScale();
+    adaptiveDrive(scale * leftStick.getY(), scale * rightStick.getY());
+
+    gearShift();
+
+    setClimber(controlPanel.getRawButton(9), controlPanel.getRawButton(5));
+    setArmPiston(controlPanel.getRawButton(7));
+    setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
+
+    autoAlign();
 
     if (controlPanel.getRawButton(3)) {
       System.out.print("Button 3 is clicked.");
@@ -129,9 +169,94 @@ public class Robot extends TimedRobot implements PIDOutput {
     } else {
       leftBottom.set(0);
     }
+
+    elevatorHeights();
   }
 
-  public void runRobot(double left, double right) {
+  // Future coders... always use this.
+  public void adaptiveDrive(double l, double r) {
+    // alpha is a parameter between 0 and 1
+    final double alpha = 0.5;
+    double c = 0.5 * (l + r);
+    double d = 0.5 * (l - r);
+    double scale = (1 - (alpha * c * c));
+    d *= scale;
+
+    // GYRO CORRECTION -- high if d is close to zero, low otherwise
+    double gRate = ahrs.getRate();
+    final double CORR_COEFF = 0.5;
+    double corr = 0.0;
+    if (Math.abs(d) < 0.05)
+      corr = (gRate * Math.abs(c) * CORR_COEFF * (1 - Math.abs(d)));
+    d -= corr;
+
+    double l_out = c + d;
+    double r_out = c - d;
+
+    setDriveMotors(l_out, r_out);
+  }
+
+  public void autoAlign() {
+    if (!turnController.isEnabled()) {
+      turnController.setSetpoint(-20.0f);
+      rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
+      turnController.enable();
+    }
+
+    System.out.println("Angle " + ahrs.getAngle());
+
+    // TODO: May need to be both positive.
+    System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
+
+    if (ahrs.getAngle() <= -19 && ahrs.getAngle() >= -21) {
+      System.out.println("Done!");
+    }
+  }
+
+  public void gearShift() {
+    if (controlPanel.getRawButtonReleased(2)) {
+      shiftMode = !shiftMode;
+    }
+
+    if (shiftMode) {
+      driveTrainShift.set(DoubleSolenoid.Value.kForward);
+    } else {
+      driveTrainShift.set(DoubleSolenoid.Value.kReverse);
+    }
+  }
+
+  public double getDrivePowerScale() {
+    double scale = 0.75;
+
+    if (leftStick.getTrigger() || rightStick.getTrigger()) {
+      scale = 0.85;
+    }
+
+    if (leftStick.getTrigger() && rightStick.getTrigger()) {
+      scale = 1;
+    }
+
+    return scale;
+  }
+
+  public void setArmPiston(boolean state) {
+    armPiston.set(state);
+  }
+
+  public void setArmMotors(boolean in, boolean out) { // TODO
+    if (in) {
+
+    } else if (out) {
+
+    }
+  }
+
+  public void setClimber(boolean front, boolean back) {
+    frontClimb.set(front);
+    backClimb.set(back);
+  }
+
+  public void setDriveMotors(double left, double right) {
     leftTop.set(left);
     leftMiddle.set(left);
     leftBottom.set(left);
@@ -142,13 +267,13 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void elevatorHeights() {
     // This is for the elevator up button
-    if (controlPanel.getRawButton(2)) {
+    if (controlPanel.getRawButton(1)) {
       System.out.println("up button");
-      elevator.set(1);
+      elevator.set(.75);
       System.out.println(elevator.getEncoder().getVelocity());
     }
     // This is for the elevator down button
-    else if (controlPanel.getRawButton(3)) {
+    else if (controlPanel.getRawButton(2)) {
       System.out.println("down button");
       elevator.set(-1);
     } else {

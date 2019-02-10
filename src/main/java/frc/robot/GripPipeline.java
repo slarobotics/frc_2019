@@ -38,10 +38,15 @@ public class GripPipeline implements VisionPipeline {
 	private double aspectRatioOut = 0.0;
 	private int contourNumber = 0;
 	private int pipelineRunning = 0;
-	private double targetAngle = 0.0;
+	public double targetAngle = 0.0;
 	private boolean foundTarget = false; // indicate whether you found the target
 	private int targetTop, targetBottom, targetLeft, targetRight, targetHeight, targetWidth;
 	private double targetDistance;
+
+	public int centerX;
+	public int centerY;
+
+	public double distanceCenterTarget;
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -54,6 +59,8 @@ public class GripPipeline implements VisionPipeline {
 	@Override
 	public void process(Mat source0) {
 		// Step HSV_Threshold0:
+		overlayOutput = source0;
+
 		Mat hsvThresholdInput = source0;
 		double[] hsvThresholdHue = { 0.0, 142.52560664362468 };
 		double[] hsvThresholdSaturation = { 0.0, 255.0 };
@@ -67,7 +74,7 @@ public class GripPipeline implements VisionPipeline {
 
 		// Step Filter_Contours0:
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
-		double filterContoursMinArea = 0.0;
+		double filterContoursMinArea = 1000;
 		double filterContoursMinPerimeter = 0.0;
 		double filterContoursMinWidth = 0.0;
 		double filterContoursMaxWidth = 1000;
@@ -76,8 +83,8 @@ public class GripPipeline implements VisionPipeline {
 		double[] filterContoursSolidity = { 0.0, 100.0 };
 		double filterContoursMaxVertices = 1000000;
 		double filterContoursMinVertices = 0;
-		double filterContoursMinRatio = 0;
-		double filterContoursMaxRatio = 1000;
+		double filterContoursMinRatio = .5;
+		double filterContoursMaxRatio = 1;
 		filterContours(filterContoursContours, filterContoursMinArea, filterContoursMinPerimeter,
 				filterContoursMinWidth, filterContoursMaxWidth, filterContoursMinHeight, filterContoursMaxHeight,
 				filterContoursSolidity, filterContoursMaxVertices, filterContoursMinVertices, filterContoursMinRatio,
@@ -104,62 +111,60 @@ public class GripPipeline implements VisionPipeline {
 		contourNumber = inputContours.size();
 
 		if (n >= 2) {
-			for (i = 0; i < n; ++i) {
-				r1 = Imgproc.boundingRect(inputContours.get(i));
+			System.out.println("# of rectangles: " + n);
 
-				Imgproc.rectangle(overlayOutput, new Point(r1.x, r1.y), new Point(r1.x + r1.width, r1.y + r1.height),
-						new Scalar(225, 0, 0));
+			// Create two bounding rectangles over the contours
+			r1 = Imgproc.boundingRect(inputContours.get(0));
+			r2 = Imgproc.boundingRect(inputContours.get(1));
 
-				for (j = (i + 1); j < n; ++j) {
-					r2 = Imgproc.boundingRect(inputContours.get(j));
+			// Get center x and y for the two rectangles
+			int x1 = r1.x + (r1.width / 2);
+			int y1 = r1.y + (r1.height / 2);
 
-					// compute y center of r2 relative to r1
-					temp = (r2.y + 0.5 * r2.height) - r1.y;
+			int x2 = r2.x + (r2.width / 2);
+			int y2 = r2.y + (r2.height / 2);
 
-					if ((temp >= 0.0) && (temp <= r1.height)) {
-						targetTop = Math.min(r1.y, r2.y);
-						targetBottom = Math.max(r1.y + r1.height, r2.y + r2.height);
+			// Get center x and y between both rectangles
+			centerX = (x1 + x2) / 2;
+			centerY = (y1 + y2) / 2;
 
-						targetLeft = Math.min(r1.x, r2.x);
-						targetRight = Math.max(r1.x + r1.width, r2.x + r2.width);
+			final MatOfInt hull = new MatOfInt();
+			final MatOfInt hull2 = new MatOfInt();
 
-						targetHeight = targetBottom - targetTop;
-						targetWidth = targetRight - targetLeft;
+			// Draw circle for the center
+			Imgproc.circle(overlayOutput, new Point(centerX, centerY), 5, new Scalar(128, 128, 0));
 
-						aspectRatio = (double) targetHeight / (double) targetWidth;
+			System.out.println("x: " + centerX + " y: " + centerY);
 
-						aspectRatioOut = aspectRatio;
+			// Subtact the center X point to half of the camera feed width
+			distanceCenterTarget = centerX - 160.0;
+			// Get angle based on camera settings
+			targetAngle = 0.5934352563 * (distanceCenterTarget / 320);
 
-						// targetDistance = 4 * 4 * 240 / (2 * targetHeight); // rough distance in
-						// inches (+/- 4)
+			// Based on both of the targets get top/bottom pixel and height of targets.
+			targetTop = Math.min(r1.y, r2.y);
+			targetBottom = Math.max(r1.y + r1.height, r2.y + r2.height);
+			targetHeight = targetBottom - targetTop;
 
-						// targetDistance = (2/3) * 240 / (2 * targetWidth * 0.5934352563);
+			// Get the distance from target based on the height of target vs camera
+			// sensors/real thing
+			targetDistance = (8.0 / targetWidth) * 346.0; // distance in inches (+/- 4)
 
-						targetDistance = (8.0 / targetWidth) * 346.0;
+			System.out.println("distance center target: " + distanceCenterTarget);
+			System.out.println("target angle " + targetAngle);
+			System.out.println("target distance " + targetAngle);
 
-						double targetCenter = targetLeft + (targetWidth / 2.0);
+			// Draw the rectangles on the screen
+			Imgproc.rectangle(overlayOutput, new Point(r1.x, r1.y), new Point(r1.x + r1.width, r1.y + r1.height),
+					new Scalar(0, 225, 0));
 
-						double distanceCenterTarget = targetCenter - 160.0;
+			Imgproc.rectangle(overlayOutput, new Point(r2.x, r2.y), new Point(r2.x + r2.width, r2.y + r2.height),
+					new Scalar(0, 0, 255));
 
-						targetAngle = 0.5934352563 * (distanceCenterTarget / 320);
-
-						System.out.println("Target Distance " + targetDistance);
-						System.out.println("Target Angle " + targetAngle);
-						System.out.println("Target Height " + targetHeight);
-						System.out.println("Target Width " + targetWidth);
-						System.out.println("Aspect Ratio " + aspectRatio);
-
-						if (Math.abs(aspectRatio - (6.0 / 8.0)) < 0.1) { // 8.0,16.0
-							foundTarget = true;
-
-							System.out.println("Found Target " + foundTarget);
-
-							Imgproc.rectangle(overlayOutput, new Point(targetLeft, targetTop),
-									new Point(targetRight, targetBottom), new Scalar(0, 0, 255));
-							return;
-						}
-					}
-				}
+			// Draw all the contours.
+			// TODO: Remove in real thing to speed rendering times.
+			for (int x = 0; x < n; x++) {
+				Imgproc.drawContours(overlayOutput, inputContours, x, new Scalar(225, 0, 0));
 			}
 		}
 	}
