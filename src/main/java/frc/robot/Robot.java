@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.UsbCamera;
 import edu.wpi.first.cameraserver.*;
@@ -48,7 +49,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   private CANSparkMax elevator;
 
   // Gear Shift
-  DoubleSolenoid driveTrainShift = new DoubleSolenoid(0, 0, 1);
+  // DoubleSolenoid driveTrainShift = new DoubleSolenoid(0, 0, 1);
 
   // Climber Pistons
   private Solenoid frontClimb;
@@ -153,7 +154,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   @Override
   public void teleopPeriodic() {
     double scale = getDrivePowerScale();
-    adaptiveDrive(scale * leftStick.getY(), scale * rightStick.getY());
+    double leftSpeed = scale * leftStick.getY();
+    double rightSpeed = scale * rightStick.getY();
+    adaptiveDrive(leftSpeed, rightSpeed);
+    SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
 
     gearShift();
 
@@ -162,6 +166,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
     autoAlign();
+
+    displayShuffleboard();
 
     if (controlPanel.getRawButton(3)) {
       System.out.print("Button 3 is clicked.");
@@ -196,6 +202,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     setDriveMotors(l_out, r_out);
   }
 
+  public void displayShuffleboard() {
+    SmartDashboard.putBoolean("Gear Shift", shiftMode);
+    SmartDashboard.putNumber("Elevator Level", 1); // TODO
+  }
+
   public void autoAlign() {
     if (!turnController.isEnabled()) {
       turnController.setSetpoint(-20.0f);
@@ -213,15 +224,15 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void gearShift() {
+  public void gearShift() { // FIXME
     if (controlPanel.getRawButtonReleased(2)) {
       shiftMode = !shiftMode;
     }
 
     if (shiftMode) {
-      driveTrainShift.set(DoubleSolenoid.Value.kForward);
+      // driveTrainShift.set(DoubleSolenoid.Value.kForward);
     } else {
-      driveTrainShift.set(DoubleSolenoid.Value.kReverse);
+      // driveTrainShift.set(DoubleSolenoid.Value.kReverse);
     }
   }
 
@@ -243,7 +254,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     armPiston.set(state);
   }
 
-  public void setArmMotors(boolean in, boolean out) { // TODO
+  public void setArmMotors(boolean in, boolean out) {
+    // FIXME: Find out what type of motor they are using
     if (in) {
 
     } else if (out) {
