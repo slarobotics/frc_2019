@@ -48,6 +48,9 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Elevator Motors
   private CANSparkMax elevator;
 
+  // Forebar Motors
+  private CANSparkMax forebar;
+
   // Arm Motors
   private TalonSRX arm;
 
@@ -112,6 +115,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
+    forebar = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless); // TODO: Make sure this # is right
     arm = new TalonSRX(0);
 
     // Inits the solenoids
@@ -314,6 +318,27 @@ public class Robot extends TimedRobot implements PIDOutput {
     leftBottom.set(left);
     rightTop.set(right);
     rightBottom.set(right);
+  }
+
+  public void setForebar(double speed) {
+    boolean isNegative = false;
+    if (speed < 0) {
+      isNegative = true;
+      speed = speed * -1;
+    }
+
+    if (speed == 0) {
+      forebar.set(0);
+    } else {
+      for (int i = 0; i <= (speed * 1000); i++) {
+        if (isNegative) {
+          forebar.set((i / 1000) * -1);
+        } else {
+          forebar.set(i / 1000);
+        }
+        Timer.delay(.0001);
+      }
+    }
   }
 
   public void setElevator(double speed) {
