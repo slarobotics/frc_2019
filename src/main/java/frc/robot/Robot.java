@@ -280,7 +280,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom.set(right);
   }
 
-  public void setElevator(double speed) { // TODO take negative in account
+  public void setElevator(double speed) {
     boolean isNegative = false;
     if (speed < 0) {
       isNegative = true;
