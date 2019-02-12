@@ -38,7 +38,6 @@ public class Robot extends TimedRobot implements PIDOutput {
   private Joystick leftStick;
   private Joystick rightStick;
   private Joystick controlPanel;
-  private Joystick elevStick;
 
   // Drivetrain Motors
   private CANSparkMax leftTop;
@@ -106,7 +105,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     leftStick = new Joystick(0);
     rightStick = new Joystick(1);
     controlPanel = new Joystick(2);
-    elevStick = new Joystick(3);
 
     // Inits the Motors
     leftTop = new CANSparkMax(0, CANSparkMaxLowLevel.MotorType.kBrushless);
@@ -155,6 +153,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   @Override
   public void teleopPeriodic() {
+    // Code for driving robot.
     double scale = getDrivePowerScale();
     double leftSpeed = scale * leftStick.getY();
     double rightSpeed = scale * rightStick.getY();
@@ -173,7 +172,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     System.out.println("POV " + controlPanel.getPOV());
 
-    if (controlPanel.getRawButton(3)) {
+    if (controlPanel.getRawButton(3)) { // TODO: Can this be removed?
       System.out.print("Button 3 is clicked.");
       leftBottom.set(1);
     } else {
@@ -212,6 +211,16 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void autoAlign() {
+    /*
+     * TODO:
+     * 
+     * - Wire to button/motor
+     * 
+     * - Make the robot go forward based on the distance
+     * 
+     * - Score!
+     */
+
     if (!turnController.isEnabled()) {
       turnController.setSetpoint(-20.0f);
       rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
@@ -241,6 +250,17 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public double getDrivePowerScale() {
+
+    /*
+     * This figures out what to set the drive train speed to.
+     * 
+     * No trigger = 0.75
+     * 
+     * One trigger = 0.85
+     * 
+     * Both triggers = 1.0
+     */
+
     double scale = 0.75;
 
     if (leftStick.getTrigger() || rightStick.getTrigger()) {
