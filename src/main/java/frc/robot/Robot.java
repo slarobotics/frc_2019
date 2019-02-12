@@ -41,8 +41,6 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Drivetrain Motors
   private CANSparkMax leftTop;
   private CANSparkMax rightTop;
-  private CANSparkMax leftMiddle;
-  private CANSparkMax rightMiddle;
   private CANSparkMax leftBottom;
   private CANSparkMax rightBottom;
 
@@ -107,11 +105,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     // Inits the Motors
     leftTop = new CANSparkMax(0, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftBottom = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
-    leftMiddle = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
-    rightMiddle = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
-    leftBottom = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
-    rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
+    rightBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
 
     // Inits the solenoids
@@ -136,7 +132,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     gripPipeline.start();
 
     // Inits Gyro
-
     try {
       ahrs = new AHRS(SPI.Port.kMXP);
     } catch (RuntimeException ex) {
@@ -273,10 +268,8 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void setDriveMotors(double left, double right) {
     leftTop.set(left);
-    leftMiddle.set(left);
     leftBottom.set(left);
     rightTop.set(right);
-    rightMiddle.set(right);
     rightBottom.set(right);
   }
 
