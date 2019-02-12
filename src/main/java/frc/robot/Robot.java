@@ -279,6 +279,13 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom.set(right);
   }
 
+  public boolean isPOVup (Joystick joystick){ // creates boolean to use later for lvl 1 control panel button
+    return joystick.getPOV() == 0;
+  }
+  public boolean isPOVdown (Joystick joystick){  // creates boolean to use later for lvl 1 control panel button
+    return joystick.getPOV() == 180;
+  }
+
   public void elevatorHeights() {
     // This is for the elevator up button
     if (controlPanel.getRawButton(1)) {
@@ -290,6 +297,20 @@ public class Robot extends TimedRobot implements PIDOutput {
     else if (controlPanel.getRawButton(2)) {
       System.out.println("down button");
       elevator.set(-1);
+    } 
+    // This is the lvl 1 button
+    else if (isPOVup(controlPanel)){
+      elevator.set(1);
+      if (elevator.getEncoder().getPosition() == 30.5){
+        elevator.set(0);
+      }
+    }
+    // This is the lvl 2 button
+    else if (isPOVdown(controlPanel)){
+      elevator.set(1);
+      if (elevator.getEncoder().getPosition() == 75.5){
+        elevator.set(0);
+      }
     } else {
       elevator.set(0);
     }
@@ -300,10 +321,10 @@ public class Robot extends TimedRobot implements PIDOutput {
     // start going up and down at that point
 
     // Constants in inches
-    int arm_width = 1; // Width of arm mechanism
-    int arm_length = 13; // length of arm mechanism
-    int elevator_height = 15; // height of elevator mechanism
-    int elevator_width = 1; // width of elevator mechanism
+    double arm_width = 3.633; // Width of arm mechanism
+    double arm_length = 44.59; // length of arm mechanism
+    int elevator_height = 56; // height of elevator mechanism
+    int elevator_width = 17; // width of elevator mechanism
 
     return (Math.sin(Math.toRadians(arm_angle)) * (arm_length - elevator_width)) + (elevator_height - arm_width)
         + arm_width;
