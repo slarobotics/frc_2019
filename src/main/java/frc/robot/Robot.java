@@ -370,15 +370,22 @@ public class Robot extends TimedRobot implements PIDOutput {
     return joystick.getPOV() == 180;
   }
 
+  public boolean isPOVright(Joystick joystick){
+    return joystick.getPOV() == 270;
+  }
+
+  public boolean isPOVleft(Joystick joystick){
+    return joystick.getPOV() == 90;
+  }
+
   public void elevatorHeights() {
     // This is for the elevator up button
-    if (controlPanel.getRawButton(1)) {
+    if (isPOVright(controlPanel)) {
       System.out.println("up button");
       setElevator(.75);
-      System.out.println(elevator.getEncoder().getVelocity());
     }
     // This is for the elevator down button
-    else if (controlPanel.getRawButton(2)) {
+    else if (isPOVleft(controlPanel)) {
       System.out.println("down button");
       setElevator(-1);
     }
