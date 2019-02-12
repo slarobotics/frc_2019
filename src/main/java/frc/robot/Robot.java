@@ -169,6 +169,8 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     displayShuffleboard();
 
+    System.out.println("POV " + controlPanel.getPOV());
+
     if (controlPanel.getRawButton(3)) {
       System.out.print("Button 3 is clicked.");
       leftBottom.set(1);
