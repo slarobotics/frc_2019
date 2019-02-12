@@ -126,7 +126,7 @@ public class Robot extends TimedRobot implements PIDOutput {
       if (!pipeline.filterContoursOutput().isEmpty()) {
         // Puts overlay output on camera stream
         outputStream.putFrame(pipeline.overlayOutput);
-        synchronized (imgLock) { // let us grab data from GripPipeline
+        synchronized (imgLock) { // Will let us grab data from GripPipeline
           targetAngle = pipeline.targetAngle;
         }
       }
@@ -151,12 +151,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   @Override
   public void teleopPeriodic() {
-    // Code for driving robot.
-    double scale = getDrivePowerScale();
-    double leftSpeed = scale * leftStick.getY();
-    double rightSpeed = scale * rightStick.getY();
-    adaptiveDrive(leftSpeed, rightSpeed);
-    SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
+    driveRobot();
 
     gearShift();
 
@@ -170,14 +165,15 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     System.out.println("POV " + controlPanel.getPOV());
 
-    if (controlPanel.getRawButton(3)) { // TODO: Can this be removed?
-      System.out.print("Button 3 is clicked.");
-      leftBottom.set(1);
-    } else {
-      leftBottom.set(0);
-    }
-
     elevatorHeights();
+  }
+
+  public void driveRobot() {
+    double scale = getDrivePowerScale();
+    double leftSpeed = scale * leftStick.getY();
+    double rightSpeed = scale * rightStick.getY();
+    adaptiveDrive(leftSpeed, rightSpeed);
+    SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
   }
 
   // Future coders... always use this.
