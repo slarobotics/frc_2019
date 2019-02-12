@@ -21,6 +21,8 @@ import edu.wpi.first.cameraserver.*;
 import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.*;
 
 import org.opencv.imgproc.Imgproc;
@@ -46,6 +48,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   // Elevator Motors
   private CANSparkMax elevator;
+
+  // Arm Motors
+  private TalonSRX arm;
 
   // Gear Shift
   // DoubleSolenoid driveTrainShift = new DoubleSolenoid(0, 0, 1);
@@ -109,6 +114,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
     rightBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
     elevator = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
+    arm = new TalonSRX(0);
 
     // Inits the solenoids
     frontClimb = new Solenoid(0);
@@ -253,11 +259,28 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void setArmMotors(boolean in, boolean out) {
-    // FIXME: Find out what type of motor they are using
+    boolean isNegative;
+    double speed = .75;
     if (in) {
-
+      isNegative = false;
     } else if (out) {
+      isNegative = true;
+    } else {
+      isNegative = false;
+      speed = 0;
+    }
 
+    if (speed == 0) {
+      arm.set(ControlMode.PercentOutput, 0);
+    } else {
+      for (int i = 0; i <= (speed * 1000); i++) {
+        if (isNegative) {
+          arm.set(ControlMode.PercentOutput, (i / 1000) * -1);
+        } else {
+          arm.set(ControlMode.PercentOutput, i / 1000);
+        }
+        Timer.delay(.0001);
+      }
     }
   }
 
