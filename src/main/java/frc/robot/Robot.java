@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.UsbCamera;
@@ -169,6 +170,8 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     displayShuffleboard();
 
+    System.out.println("POV " + controlPanel.getPOV());
+
     if (controlPanel.getRawButton(3)) {
       System.out.print("Button 3 is clicked.");
       leftBottom.set(1);
@@ -277,10 +280,32 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom.set(right);
   }
 
-  public boolean isPOVup (Joystick joystick){ // creates boolean to use later for lvl 1 control panel button
+  public void setElevator(double speed) { // TODO take negative in account
+    boolean isNegative = false;
+    if (speed < 0) {
+      isNegative = true;
+      speed = speed * -1;
+    }
+
+    if (speed == 0) {
+      elevator.set(0);
+    } else {
+      for (int i = 0; i <= (speed * 1000); i++) {
+        if (isNegative) {
+          elevator.set((i / 1000) * -1);
+        } else {
+          elevator.set(i / 1000);
+        }
+        Timer.delay(.0001);
+      }
+    }
+  }
+
+  public boolean isPOVup(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
     return joystick.getPOV() == 0;
   }
-  public boolean isPOVdown (Joystick joystick){  // creates boolean to use later for lvl 1 control panel button
+
+  public boolean isPOVdown(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
     return joystick.getPOV() == 180;
   }
 
@@ -288,29 +313,29 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is for the elevator up button
     if (controlPanel.getRawButton(1)) {
       System.out.println("up button");
-      elevator.set(.75);
+      setElevator(.75);
       System.out.println(elevator.getEncoder().getVelocity());
     }
     // This is for the elevator down button
     else if (controlPanel.getRawButton(2)) {
       System.out.println("down button");
-      elevator.set(-1);
-    } 
+      setElevator(-1);
+    }
     // This is the lvl 1 button
-    else if (isPOVup(controlPanel)){
-      elevator.set(1);
-      if (elevator.getEncoder().getPosition() == 30.5){
-        elevator.set(0);
+    else if (isPOVup(controlPanel)) {
+      setElevator(1);
+      if (elevator.getEncoder().getPosition() == 30.5) {
+        setElevator(0);
       }
     }
     // This is the lvl 2 button
-    else if (isPOVdown(controlPanel)){
-      elevator.set(1);
-      if (elevator.getEncoder().getPosition() == 75.5){
-        elevator.set(0);
+    else if (isPOVdown(controlPanel)) {
+      setElevator(1);
+      if (elevator.getEncoder().getPosition() == 75.5) {
+        setElevator(0);
       }
     } else {
-      elevator.set(0);
+      setElevator(0);
     }
   }
 
