@@ -155,14 +155,18 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   @Override
   public void teleopPeriodic() {
-    driveRobot();
-    runForebar();
+    // Drive Train
     gearShift();
+    driveRobot();
 
+    // Mechs
+    runElevator();
+    runForebar();
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
+    // Auton
     if (controlPanel.getRawButtonReleased(2)) {
       autoAlignEnabled = !autoAlignEnabled;
       if (autoAlignEnabled) {
@@ -171,12 +175,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
 
     displayShuffleboard();
-
-    // System.out.println("POV " + controlPanel.getPOV());
-
-    // elevatorHeights();
-
-    // forebarAngles();
   }
 
   public void driveRobot() {
@@ -185,29 +183,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     double rightSpeed = scale * rightStick.getY();
     setDriveMotors(leftSpeed, rightSpeed);
     SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
-  }
-
-  // Future coders... always use this.
-  public void adaptiveDrive(double l, double r) {
-    // alpha is a parameter between 0 and 1
-    final double alpha = 0.5;
-    double c = 0.5 * (l + r);
-    double d = 0.5 * (l - r);
-    double scale = (1 - (alpha * c * c));
-    d *= scale;
-
-    // GYRO CORRECTION -- high if d is close to zero, low otherwise
-    double gRate = ahrs.getRate();
-    final double CORR_COEFF = 0.5;
-    double corr = 0.0;
-    if (Math.abs(d) < 0.05)
-      corr = (gRate * Math.abs(c) * CORR_COEFF * (1 - Math.abs(d)));
-    d -= corr;
-
-    double l_out = c + d;
-    double r_out = c - d;
-
-    setDriveMotors(l_out, r_out);
   }
 
   public void displayShuffleboard() {
@@ -412,6 +387,16 @@ public class Robot extends TimedRobot implements PIDOutput {
       if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
         setElevator(0);
       }
+    }
+  }
+
+  public void runElevator() {
+    if (isPOVright(controlPanel)) {
+      setElevator(.75);
+    } else if (isPOVleft(controlPanel)) {
+      setElevator(-.75);
+    } else {
+      setElevator(0);
     }
   }
 
