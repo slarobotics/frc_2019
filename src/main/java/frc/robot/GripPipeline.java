@@ -41,7 +41,7 @@ public class GripPipeline implements VisionPipeline {
 	public double targetAngle = 0.0;
 	private boolean foundTarget = false; // indicate whether you found the target
 	private int targetTop, targetBottom, targetLeft, targetRight, targetHeight, targetWidth;
-	private double targetDistance;
+	public double targetDistance;
 
 	public int centerX;
 	public int centerY;
@@ -146,7 +146,7 @@ public class GripPipeline implements VisionPipeline {
 			targetBottom = Math.max(r1.y + r1.height, r2.y + r2.height);
 			targetHeight = targetBottom - targetTop;
 
-			// Get the distance from target based on the height of target vs camera
+			// Get the distance from target based on the width of target vs camera
 			// sensors/real thing
 			targetDistance = (8.0 / targetWidth) * 346.0; // distance in inches (+/- 4)
 
@@ -162,10 +162,10 @@ public class GripPipeline implements VisionPipeline {
 					new Scalar(0, 0, 255));
 
 			// Draw all the contours.
-			// TODO: Remove in real thing to speed rendering times.
-			for (int x = 0; x < n; x++) {
-				Imgproc.drawContours(overlayOutput, inputContours, x, new Scalar(225, 0, 0));
-			}
+			/*
+			 * for (int x = 0; x < n; x++) { Imgproc.drawContours(overlayOutput,
+			 * inputContours, x, new Scalar(225, 0, 0)); }
+			 */
 		}
 	}
 

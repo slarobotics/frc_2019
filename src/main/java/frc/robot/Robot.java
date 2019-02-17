@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
@@ -49,9 +50,9 @@ public class Robot extends TimedRobot implements PIDOutput {
   private TalonSRX arm;
 
   // Gear Shift
-  // DoubleSolenoid driveTrainShift = new DoubleSolenoid(0, 0, 1);
+  private Solenoid driveTrainShift = new Solenoid(0);
 
-  // Climber Pistons
+  // Climber Piston
   private Solenoid frontClimb;
   private Solenoid backClimb;
 
@@ -73,8 +74,6 @@ public class Robot extends TimedRobot implements PIDOutput {
   private UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
   private CvSource outputStream;
   private VisionThread gripPipeline;
-  private VisionThread rectDraw;
-  private double centerX = 0.0;
   private final Object imgLock = new Object();
 
   /* The following PID Controller coefficients will need to be tuned */
@@ -96,6 +95,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Shifting Mode
   public boolean shiftMode = false;
 
+  // Auto Align
+  public boolean autoAlignEnabled = false;
+  public double distanceToTarget;
+
   @Override
   public void robotInit() {
     // Inits the Joysticks
@@ -104,13 +107,17 @@ public class Robot extends TimedRobot implements PIDOutput {
     controlPanel = new Joystick(2);
 
     // Inits the Motors
-    leftTop = new CANSparkMax(0, CANSparkMaxLowLevel.MotorType.kBrushless);
-    leftBottom = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
-    rightTop = new CANSparkMax(1, CANSparkMaxLowLevel.MotorType.kBrushless);
-    rightBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
-    elevator = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
-    forebar = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless); // TODO: Make sure this # is right
-    arm = new TalonSRX(0);
+    leftTop = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftTop.setInverted(true);
+    leftBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftBottom.follow(leftTop, false);
+    rightTop = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
+    rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
+    rightBottom.follow(rightTop, false);
+    elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
+    forebar = new CANSparkMax(7, CANSparkMaxLowLevel.MotorType.kBrushless); //
+
+    arm = new TalonSRX(0); // TODO: Make sure this # is right
 
     // Inits the solenoids
     frontClimb = new Solenoid(0);
@@ -120,14 +127,12 @@ public class Robot extends TimedRobot implements PIDOutput {
     // Inits Vision Pipeline
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
     camera.setResolution(320, 240);
-
-    gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> {
-      // No point in drawling nothing is there.
-      if (!pipeline.filterContoursOutput().isEmpty()) {
-        // Puts overlay output on camera stream
+    gripPipeline = new VisionThread(camera, new GripPipeline(), pipeline -> { // No point in drawling nothing is there.
+      if (!pipeline.filterContoursOutput().isEmpty()) { // Puts overlay output on camera stream
         outputStream.putFrame(pipeline.overlayOutput);
         synchronized (imgLock) { // Will let us grab data from GripPipeline
           targetAngle = pipeline.targetAngle;
+          distanceToTarget = pipeline.targetAngle;
         }
       }
     });
@@ -152,27 +157,34 @@ public class Robot extends TimedRobot implements PIDOutput {
   @Override
   public void teleopPeriodic() {
     driveRobot();
-
+    runForebar();
     gearShift();
 
-    setClimber(controlPanel.getRawButton(9), controlPanel.getRawButton(5));
+    setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
-    autoAlign();
+    if (controlPanel.getRawButtonReleased(2)) {
+      autoAlignEnabled = !autoAlignEnabled;
+      if (autoAlignEnabled) {
+        autoAlign();
+      }
+    }
 
     displayShuffleboard();
 
-    System.out.println("POV " + controlPanel.getPOV());
+    // System.out.println("POV " + controlPanel.getPOV());
 
-    elevatorHeights();
+    // elevatorHeights();
+
+    // forebarAngles();
   }
 
   public void driveRobot() {
     double scale = getDrivePowerScale();
     double leftSpeed = scale * leftStick.getY();
     double rightSpeed = scale * rightStick.getY();
-    adaptiveDrive(leftSpeed, rightSpeed);
+    setDriveMotors(leftSpeed, rightSpeed);
     SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
   }
 
@@ -205,57 +217,53 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void autoAlign() {
-    /*
-     * TODO:
-     * 
-     * - Wire to button/motor
-     * 
-     * - Make the robot go forward based on the distance
-     * 
-     * - Score!
-     */
+    // TODO: Score!
 
-    if (!turnController.isEnabled()) {
-      turnController.setSetpoint(-20.0f);
-      rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
-      turnController.enable();
-    }
+    while (autoAlignEnabled) {
+      if (!turnController.isEnabled()) {
+        turnController.setSetpoint(targetAngle);
+        rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
+        turnController.enable();
+      }
 
-    System.out.println("Angle " + ahrs.getAngle());
+      System.out.println("Angle " + ahrs.getAngle());
+      System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
 
-    // TODO: May need to be both positive.
-    System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
-
-    if (ahrs.getAngle() <= -19 && ahrs.getAngle() >= -21) {
-      System.out.println("Done!");
+      if (rotateToAngleRate <= 0.05) { // TODO: Is this right?
+        if (distanceToTarget >= 10) { // TODO: Get real distance.
+          autoAlignEnabled = false;
+          setDriveMotors(0, 0);
+        } else {
+          setDriveMotors(0.1, 0.1);
+        }
+      } else {
+        setDriveMotors(rotateToAngleRate, (rotateToAngleRate * -1));
+      }
     }
   }
 
-  public void gearShift() { // FIXME
-    if (controlPanel.getRawButtonReleased(2)) {
-      shiftMode = !shiftMode;
+  public void gearShift() {
+    if (leftStick.getRawButtonReleased(2)) {
+      shiftMode = true;
+    } else if (rightStick.getRawButtonReleased(2)) {
+      shiftMode = false;
     }
 
-    if (shiftMode) {
-      // driveTrainShift.set(DoubleSolenoid.Value.kForward);
-    } else {
-      // driveTrainShift.set(DoubleSolenoid.Value.kReverse);
-    }
+    driveTrainShift.set(shiftMode);
   }
 
   public double getDrivePowerScale() {
-
     /*
      * This figures out what to set the drive train speed to.
      * 
-     * No trigger = 0.75
+     * No trigger = 0.65
      * 
      * One trigger = 0.85
      * 
      * Both triggers = 1.0
      */
 
-    double scale = 0.75;
+    double scale = 0.65;
 
     if (leftStick.getTrigger() || rightStick.getTrigger()) {
       scale = 0.85;
@@ -266,6 +274,16 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
 
     return scale;
+  }
+
+  public void runForebar() {
+    if (controlPanel.getRawButton(8)) {
+      setForebar(0.75);
+    } else if (controlPanel.getRawButton(1)) {
+      setForebar(-0.75);
+    } else {
+      setForebar(0);
+    }
   }
 
   public void setArmPiston(boolean state) {
@@ -305,9 +323,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void setDriveMotors(double left, double right) {
     leftTop.set(left);
-    leftBottom.set(left);
     rightTop.set(right);
-    rightBottom.set(right);
   }
 
   public void setForebar(double speed) {
@@ -360,11 +376,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     return joystick.getPOV() == 180;
   }
 
-  public boolean isPOVright(Joystick joystick){
+  public boolean isPOVright(Joystick joystick) {
     return joystick.getPOV() == 270;
   }
 
-  public boolean isPOVleft(Joystick joystick){
+  public boolean isPOVleft(Joystick joystick) {
     return joystick.getPOV() == 90;
   }
 
@@ -394,17 +410,19 @@ public class Robot extends TimedRobot implements PIDOutput {
       }
     } else if (controlPanel.getRawButton(4)) {
       setElevator(.75);
-      if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1){
+      if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
         setElevator(0);
       }
     }
   }
 
-  public void forebarAngles(){
-    if (controlPanel.getRawButton(4)){
+  public void forebarAngles() {
+    if (controlPanel.getRawButton(4)) {
       setForebar(.75);
-      if (forebar.getEncoder().getPosition() >= 215 || forebar.getEncoder().getPosition() <= 216){
+      System.out.println("button pressed, motor on");
+      if (forebar.getEncoder().getPosition() >= 215 || forebar.getEncoder().getPosition() <= 216) {
         setForebar(0);
+        System.out.println("motor off");
       }
     }
   }
