@@ -169,7 +169,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
     // Auton
-    if (controlPanel.getRawButtonReleased(2)) {
+    if (controlPanel.getRawButtonReleased(4)) {
       autoAlignEnabled = !autoAlignEnabled;
       if (autoAlignEnabled) {
         autoAlign();
