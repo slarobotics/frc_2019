@@ -106,20 +106,20 @@ public class Robot extends TimedRobot implements PIDOutput {
     controlPanel = new Joystick(2);
 
     // Inits the Motors
-    leftTop = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftTop = new CANSparkMax(2, CANSparkMaxLowLevel.MotorType.kBrushless); // roborio side, near roborio
     leftTop.setInverted(true);
-    leftBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless);
+    leftBottom = new CANSparkMax(3, CANSparkMaxLowLevel.MotorType.kBrushless); // roborio side, far from rio
     leftBottom.follow(leftTop, false);
-    rightTop = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless);
-    rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless);
+    rightTop = new CANSparkMax(4, CANSparkMaxLowLevel.MotorType.kBrushless); // pdp side, near pdp
+    rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless); // pdp side, far from pdp
     rightBottom.follow(rightTop, false);
-    elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless);
+    elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
     forebar = new CANSparkMax(7, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
     arm = new TalonSRX(0); // TODO: Make sure this # is right
 
     // Inits the solenoids
-    frontClimb = new Solenoid(0);
+    frontClimb = new Solenoid(3);
     backClimb = new Solenoid(1);
     armPiston = new Solenoid(2);
 
@@ -153,15 +153,14 @@ public class Robot extends TimedRobot implements PIDOutput {
     ahrs.zeroYaw();
   }
 
-  @Override
-  public void teleopPeriodic() {
+  public void controlLoop() {
     // Drive Train
     gearShift();
     driveRobot();
 
     // Mechs
     runElevator();
-    runForebar();
+    // runForebar();
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
@@ -175,6 +174,16 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
 
     displayShuffleboard();
+  }
+
+  @Override
+  public void teleopPeriodic() {
+    controlLoop();
+  }
+
+  @Override
+  public void autonomousPeriodic() {
+    controlLoop();
   }
 
   public void driveRobot() {
@@ -250,15 +259,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     return scale;
   }
 
-  public void runForebar() {
-    if (controlPanel.getRawButton(8)) {
-      setForebar(0.75);
-    } else if (controlPanel.getRawButton(1)) {
-      setForebar(-0.75);
-    } else {
-      setForebar(0);
-    }
-  }
+  /*
+   * public void runForebar() { if (controlPanel.getRawButton(8)) {
+   * setForebar(0.75); } else if (controlPanel.getRawButton(1)) {
+   * setForebar(-0.75); } else { setForebar(0); } }
+   */
 
   public void setArmPiston(boolean state) {
     armPiston.set(state);
@@ -321,6 +326,16 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
+  public void runElevator() {
+    if (controlPanel.getRawButton(8)) {
+      setElevator(0.25);
+    } else if (controlPanel.getRawButton(1)) {
+      setElevator(-0.25);
+    } else {
+      setElevator(0);
+    }
+  }
+
   public void setElevator(double speed) {
     boolean isNegative = false;
     if (speed < 0) {
@@ -362,7 +377,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is for the elevator up button
     if (isPOVright(controlPanel)) {
       System.out.println("up button");
-      setElevator(.75);
+      setElevator(.25); // Edited to go slow
     }
     // This is for the elevator down button
     else if (isPOVleft(controlPanel)) {
@@ -390,15 +405,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void runElevator() {
-    if (isPOVright(controlPanel)) {
-      setElevator(.75);
-    } else if (isPOVleft(controlPanel)) {
-      setElevator(-.75);
-    } else {
-      setElevator(0);
-    }
-  }
+  /*
+   * public void runElevator() { if (isPOVright(controlPanel)) { setElevator(.75);
+   * } else if (isPOVleft(controlPanel)) { setElevator(-.75); } else {
+   * setElevator(0); } }
+   */
 
   public void forebarAngles() {
     if (controlPanel.getRawButton(4)) {
