@@ -161,6 +161,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     // Mechs
     runElevator();
     // runForebar();
+    // elevatorHeights();
+    
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
@@ -260,9 +262,15 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   /*
-   * public void runForebar() { if (controlPanel.getRawButton(8)) {
-   * setForebar(0.75); } else if (controlPanel.getRawButton(1)) {
-   * setForebar(-0.75); } else { setForebar(0); } }
+   * public void runForebar() { 
+   * if (controlPanel.getRawButton(8)) {
+   *  setForebar(0.75); 
+   * } else if (controlPanel.getRawButton(1)) {
+   *  setForebar(-0.75); 
+   * } else { 
+   *  setForebar(0); 
+   * } 
+   * }
    */
 
   public void setArmPiston(boolean state) {
@@ -305,7 +313,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightTop.set(right);
   }
 
-  public void setForebar(double speed) {
+  public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100 and break
     boolean isNegative = false;
     if (speed < 0) {
       isNegative = true;
@@ -326,7 +334,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void runElevator() {
+  public void runElevator() { // incremental up/down elevator buttons (temporary, POV buttons not working)
     if (controlPanel.getRawButton(8)) {
       setElevator(0.25);
     } else if (controlPanel.getRawButton(1)) {
@@ -336,7 +344,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void setElevator(double speed) {
+  public void setElevator(double speed) { // makes elevator motors speed up incrementally so mech doesn't go from 0 to 100 and break
     boolean isNegative = false;
     if (speed < 0) {
       isNegative = true;
@@ -365,11 +373,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     return joystick.getPOV() == 180;
   }
 
-  public boolean isPOVright(Joystick joystick) {
+  public boolean isPOVright(Joystick joystick) { // creates boolean for POV right button
     return joystick.getPOV() == 270;
   }
 
-  public boolean isPOVleft(Joystick joystick) {
+  public boolean isPOVleft(Joystick joystick) { // creates boolean for POV left button
     return joystick.getPOV() == 90;
   }
 
@@ -399,6 +407,7 @@ public class Robot extends TimedRobot implements PIDOutput {
       if (elevator.getEncoder().getPosition() >= 75 || elevator.getEncoder().getPosition() <= 76) {
         setElevator(0);
       }
+      // This is the lvl 3 button
     } else if (controlPanel.getRawButton(4)) {
       System.out.println("4");
       setElevator(.75);
@@ -416,7 +425,7 @@ public class Robot extends TimedRobot implements PIDOutput {
    * setElevator(0); } }
    */
 
-  public void forebarAngles() {
+  public void forebarAngles() { // runs forebar motor until reaches ideal angle
     if (controlPanel.getRawButton(4)) {
       setForebar(.75);
       System.out.println("button pressed, motor on");
