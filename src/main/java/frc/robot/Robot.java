@@ -404,7 +404,7 @@ public class Robot extends TimedRobot implements PIDOutput {
       // This is the lvl 3 button
     } else if (controlPanel.getRawButton(4)) {
       setElevator(.25);
-      if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
+      if (elevator.getEncoder().getPosition() >= 95 || elevator.getEncoder().getPosition() <= 96) {
         setElevator(0);
       }
     } else {
