@@ -166,7 +166,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
     // Auton
-    if (controlPanel.getRawButtonReleased(2)) {
+    if (controlPanel.getRawButtonReleased(4)) {
       autoAlignEnabled = !autoAlignEnabled;
       if (autoAlignEnabled) {
         autoAlign();
@@ -386,6 +386,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
     // This is the lvl 1 button
     else if (isPOVup(controlPanel)) {
+      System.out.println("pov up");
       setElevator(1);
       if (elevator.getEncoder().getPosition() >= 30 || elevator.getEncoder().getPosition() <= 31) {
         setElevator(0);
@@ -393,15 +394,19 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
     // This is the lvl 2 button
     else if (isPOVdown(controlPanel)) {
+      System.out.println("pov down");
       setElevator(1);
       if (elevator.getEncoder().getPosition() >= 75 || elevator.getEncoder().getPosition() <= 76) {
         setElevator(0);
       }
     } else if (controlPanel.getRawButton(4)) {
+      System.out.println("4");
       setElevator(.75);
       if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
         setElevator(0);
       }
+    } else {
+      setElevator(0);
     }
   }
 
