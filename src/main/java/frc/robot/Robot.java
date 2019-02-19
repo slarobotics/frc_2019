@@ -401,20 +401,20 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is the lvl 1 button
     else if (isPOVup(controlPanel)) {
       setElevator(.5);
-      if (elevator.getEncoder().getPosition() >= 30 || elevator.getEncoder().getPosition() <= 31) {
+      if (elevator.getEncoder().getPosition() >= 30 && elevator.getEncoder().getPosition() <= 31) {
         setElevator(0);
       }
     }
     // This is the lvl 2 button
     else if (isPOVdown(controlPanel)) {
       setElevator(.5);
-      if (elevator.getEncoder().getPosition() >= 75 || elevator.getEncoder().getPosition() <= 76) {
+      if (elevator.getEncoder().getPosition() >= 75 && elevator.getEncoder().getPosition() <= 76) {
         setElevator(0);
       }
       // This is the lvl 3 button
     } else if (controlPanel.getRawButton(4)) {
       setElevator(.5);
-      if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
+      if (elevator.getEncoder().getPosition() >= 89 && elevator.getEncoder().getPosition() <= 90.1) {
         setElevator(0);
       }
     } else {
@@ -438,7 +438,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     if (controlPanel.getRawButton(4)) {
       setForebar(.5);
       System.out.println("button pressed, motor on");
-      if (forebar.getEncoder().getPosition() >= 215 || forebar.getEncoder().getPosition() <= 216) {
+      if (forebar.getEncoder().getPosition() >= 215 && forebar.getEncoder().getPosition() <= 216) {
         setForebar(0);
         System.out.println("motor off");
       }
