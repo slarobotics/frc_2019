@@ -49,7 +49,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   private CANSparkMax forebar;
 
   // Arm Motors
-  private TalonSRX arm;
+  // private TalonSRX arm;
 
   // Gear Shift
   private Solenoid driveTrainShift = new Solenoid(0);
@@ -121,9 +121,9 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless); // pdp side, far from pdp
     rightBottom.follow(rightTop, false);
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
-    forebar = new CANSparkMax(7, CANSparkMaxLowLevel.MotorType.kBrushless); //
+    forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
-    arm = new TalonSRX(0); // TODO: Make sure this # is right
+    // arm = new TalonSRX(0); // TODO: Make sure this # is right
 
     // Inits the solenoids
     frontClimb = new Solenoid(3);
@@ -171,7 +171,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     // runElevator();
     elevatorHeights();
     LimitSwtiches();
-    
+
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
@@ -279,16 +279,15 @@ public class Robot extends TimedRobot implements PIDOutput {
     return scale;
   }
 
-  
-   public void runForebar() { 
+  public void runForebar() {
     if (controlPanel.getRawButton(8)) {
-      setForebar(0.5); 
+      setForebar(0.5);
     } else if (controlPanel.getRawButton(1)) {
-     setForebar(-0.5); 
-    } else { 
-     setForebar(0); 
-    } 
+      setForebar(-0.5);
+    } else {
+      setForebar(0);
     }
+  }
 
   public void setArmPiston(boolean state) {
     armPiston.set(state);
@@ -306,18 +305,12 @@ public class Robot extends TimedRobot implements PIDOutput {
       speed = 0;
     }
 
-    if (speed == 0) {
-      arm.set(ControlMode.PercentOutput, 0);
-    } else {
-      for (int i = 0; i <= (speed * 1000); i++) {
-        if (isNegative) {
-          arm.set(ControlMode.PercentOutput, (i / 1000) * -1);
-        } else {
-          arm.set(ControlMode.PercentOutput, i / 1000);
-        }
-        Timer.delay(.0001);
-      }
-    }
+    /*
+     * if (speed == 0) { arm.set(ControlMode.PercentOutput, 0); } else { for (int i
+     * = 0; i <= (speed * 1000); i++) { if (isNegative) {
+     * arm.set(ControlMode.PercentOutput, (i / 1000) * -1); } else {
+     * arm.set(ControlMode.PercentOutput, i / 1000); } Timer.delay(.0001); } }
+     */
   }
 
   public void setClimber(boolean front, boolean back) {
@@ -330,7 +323,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightTop.set(right);
   }
 
-  public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100 and break
+  public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100
+                                         // and break
     boolean isNegative = false;
     if (speed < 0) {
       isNegative = true;
@@ -361,7 +355,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void setElevator(double speed) { // makes elevator motors speed up incrementally so mech doesn't go from 0 to 100 and break
+  public void setElevator(double speed) { // makes elevator motors speed up incrementally so mech doesn't go from 0 to
+                                          // 100 and break
     boolean isNegative = false;
     if (speed < 0) {
       isNegative = true;
@@ -402,7 +397,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is for the elevator up button
     if (isPOVright(controlPanel)) {
       System.out.println("up button");
-      setElevator(.5); 
+      setElevator(.5);
     }
     // This is for the elevator down button
     else if (isPOVleft(controlPanel)) {
@@ -427,7 +422,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void LimitSwtiches() {
-    if (limitBottomE.get() || limitTopE.get()){
+    if (limitBottomE.get() || limitTopE.get()) {
       setElevator(0);
     }
   }
@@ -447,10 +442,10 @@ public class Robot extends TimedRobot implements PIDOutput {
         setForebar(0);
         System.out.println("motor off");
       }
-    // lvl 1
-    } else if (isPOVup(controlPanel)){
+      // lvl 1
+    } else if (isPOVup(controlPanel)) {
       setForebar(-.5);
-      if (forebar.getEncoder().getPosition() >= -111 && forebar.getEncoder().getPosition() <= -110){
+      if (forebar.getEncoder().getPosition() >= -111 && forebar.getEncoder().getPosition() <= -110) {
         setForebar(0);
       }
     }

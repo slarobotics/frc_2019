@@ -99,7 +99,7 @@ public class GripPipeline implements VisionPipeline {
 		contourNumber = inputContours.size();
 
 		if (n >= 2) {
-			System.out.println("# of rectangles: " + n);
+			// System.out.println("# of rectangles: " + n);
 
 			// Create two bounding rectangles over the contours
 			r1 = Imgproc.boundingRect(inputContours.get(0));
@@ -122,7 +122,7 @@ public class GripPipeline implements VisionPipeline {
 			// Draw circle for the center
 			Imgproc.circle(overlayOutput, new Point(centerX, centerY), 5, new Scalar(128, 128, 0));
 
-			System.out.println("x: " + centerX + " y: " + centerY);
+			// System.out.println("x: " + centerX + " y: " + centerY);
 
 			// Subtact the center X point to half of the camera feed width
 			distanceCenterTarget = centerX - 160.0;
@@ -138,9 +138,9 @@ public class GripPipeline implements VisionPipeline {
 			// sensors/real thing
 			targetDistance = (8.0 / targetWidth) * 346.0; // distance in inches (+/- 4)
 
-			System.out.println("distance center target: " + distanceCenterTarget);
-			System.out.println("target angle " + targetAngle);
-			System.out.println("target distance " + targetAngle);
+			// System.out.println("distance center target: " + distanceCenterTarget);
+			// System.out.println("target angle " + targetAngle);
+			// System.out.println("target distance " + targetAngle);
 
 			// Draw the rectangles on the screen
 			Imgproc.rectangle(overlayOutput, new Point(r1.x, r1.y), new Point(r1.x + r1.width, r1.y + r1.height),
