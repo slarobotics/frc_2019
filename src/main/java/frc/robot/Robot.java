@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
@@ -98,6 +99,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   public boolean autoAlignEnabled = false;
   public double distanceToTarget;
 
+  // Limit Switches
+  private DigitalInput limitBottomE;
+  private DigitalInput limitTopE;
+
   @Override
   public void robotInit() {
     // Inits the Joysticks
@@ -163,6 +168,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     forebarAngles();
     // runElevator();
     elevatorHeights();
+    LimitSwtiches();
     
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
@@ -412,6 +418,12 @@ public class Robot extends TimedRobot implements PIDOutput {
         setElevator(0);
       }
     } else {
+      setElevator(0);
+    }
+  }
+
+  public void LimitSwtiches() {
+    if (limitBottomE.get() || limitTopE.get()){
       setElevator(0);
     }
   }
