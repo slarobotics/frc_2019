@@ -278,8 +278,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  }
-
   public void setArmPiston(boolean state) {
     armPiston.set(state);
   }
