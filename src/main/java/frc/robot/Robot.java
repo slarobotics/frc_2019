@@ -23,8 +23,6 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.*;
 
-import org.graalvm.compiler.lir.Variable;
-
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -208,14 +206,12 @@ public class Robot extends TimedRobot implements PIDOutput {
   public void displayShuffleboard() {
     SmartDashboard.putBoolean("Gear Shift", shiftMode);
 
-    if (isPOVup(controlPanel)){ // lvl 1
+    if (isPOVup(controlPanel)) { // lvl 1
       SmartDashboard.setDefaultNumber("Elevtor Level", 1);
-    }
-    else if (isPOVdown(controlPanel)){ // lvl 2
+    } else if (isPOVdown(controlPanel)) { // lvl 2
       SmartDashboard.setDefaultNumber("Elevator Level", 2);
-    }
-    else if (controlPanel.getRawButton(4)){ // lvl 3
-      SmartDashboard.setDefaultNumber("Elevator Level", 3)
+    } else if (controlPanel.getRawButton(4)) { // lvl 3
+      SmartDashboard.setDefaultNumber("Elevator Level", 3);
     }
   }
 
