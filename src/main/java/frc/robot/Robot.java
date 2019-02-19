@@ -114,7 +114,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     rightBottom = new CANSparkMax(5, CANSparkMaxLowLevel.MotorType.kBrushless); // pdp side, far from pdp
     rightBottom.follow(rightTop, false);
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
-    forebar = new CANSparkMax(7, CANSparkMaxLowLevel.MotorType.kBrushless); //
+    forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
     // arm = new TalonSRX(0); // TODO: Make sure this # is right
 
@@ -265,10 +265,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   public void runForebar() {
     if (controlPanel.getRawButton(8)) {
       System.out.println("8");
-      setForebar(0.25);
+      forebar.set(0.25);
     } else if (controlPanel.getRawButton(1)) {
       System.out.println("1");
-      setForebar(-0.25);
+      forebar.set(-0.25);
     } else {
       setForebar(0);
     }
@@ -384,12 +384,12 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is the // This is for the elevator up button
     if (isPOVright(controlPanel)) {
       System.out.println("up button");
-      setElevator(.25); // Edited to go slow
+      elevator.set(.25); // Edited to go slow
     }
     // This is for the elevator down button
     else if (isPOVleft(controlPanel)) {
       System.out.println("down button");
-      setElevator(-.25);
+      elevator.set(-.25);
     }
     // This is the lvl 1 button
     else if (isPOVup(controlPanel)) {
