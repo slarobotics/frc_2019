@@ -265,9 +265,9 @@ public class Robot extends TimedRobot implements PIDOutput {
   
    public void runForebar() { 
     if (controlPanel.getRawButton(8)) {
-      setForebar(0.25); 
+      setForebar(0.5); 
     } else if (controlPanel.getRawButton(1)) {
-     setForebar(-0.25); 
+     setForebar(-0.5); 
     } else { 
      setForebar(0); 
     } 
@@ -336,9 +336,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void runElevator() { // incremental up/down elevator buttons (temporary, POV buttons not working)
     if (controlPanel.getRawButton(8)) {
-      setElevator(0.25);
+      setElevator(0.5);
     } else if (controlPanel.getRawButton(1)) {
-      setElevator(-0.25);
+      setElevator(-0.5);
     } else {
       setElevator(0);
     }
@@ -385,39 +385,29 @@ public class Robot extends TimedRobot implements PIDOutput {
     // This is for the elevator up button
     if (isPOVright(controlPanel)) {
       System.out.println("up button");
-      setElevator(.25); // Edited to go slow
+      setElevator(.5); 
     }
     // This is for the elevator down button
     else if (isPOVleft(controlPanel)) {
       System.out.println("down button");
-      setElevator(-.25);
-    }
-    // This is the // This is for the elevator up button
-    if (isPOVright(controlPanel)) {
-      System.out.println("up button");
-      setElevator(.25); // Edited to go slow
-    }
-    // This is for the elevator down button
-    else if (isPOVleft(controlPanel)) {
-      System.out.println("down button");
-      setElevator(-.25);
+      setElevator(-.5);
     }
     // This is the lvl 1 button
     else if (isPOVup(controlPanel)) {
-      setElevator(.25);
+      setElevator(.5);
       if (elevator.getEncoder().getPosition() >= 30 || elevator.getEncoder().getPosition() <= 31) {
         setElevator(0);
       }
     }
     // This is the lvl 2 button
     else if (isPOVdown(controlPanel)) {
-      setElevator(.25);
+      setElevator(.5);
       if (elevator.getEncoder().getPosition() >= 75 || elevator.getEncoder().getPosition() <= 76) {
         setElevator(0);
       }
       // This is the lvl 3 button
     } else if (controlPanel.getRawButton(4)) {
-      setElevator(.25);
+      setElevator(.5);
       if (elevator.getEncoder().getPosition() >= 89 || elevator.getEncoder().getPosition() <= 90.1) {
         setElevator(0);
       }
@@ -434,7 +424,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void forebarAngles() { // runs forebar motor until reaches ideal angle
     if (controlPanel.getRawButton(4)) {
-      setForebar(.25);
+      setForebar(.5);
       System.out.println("button pressed, motor on");
       if (forebar.getEncoder().getPosition() >= 215 || forebar.getEncoder().getPosition() <= 216) {
         setForebar(0);
