@@ -166,10 +166,7 @@ public class Robot extends TimedRobot implements PIDOutput {
     // Mechs
     runForebar();
     forebarAngles();
-    // runElevator();
     elevatorHeights();
-    LimitSwtiches();
-
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
     setArmPiston(controlPanel.getRawButton(7));
     setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
@@ -182,8 +179,11 @@ public class Robot extends TimedRobot implements PIDOutput {
       }
     }
 
+    // Shuffleboard
     displayShuffleboard();
   }
+
+  // Control Loops
 
   @Override
   public void teleopPeriodic() {
@@ -195,6 +195,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     controlLoop();
   }
 
+  // Drivetrain
+
   public void driveRobot() {
     double scale = getDrivePowerScale();
     double leftSpeed = scale * leftStick.getY();
@@ -203,45 +205,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     SmartDashboard.putNumber("speed", Math.max(leftSpeed, rightSpeed));
   }
 
-  public void displayShuffleboard() {
-    SmartDashboard.putBoolean("Gear Shift", shiftMode);
-
-    if (isPOVup(controlPanel)) { // lvl 1
-      SmartDashboard.setDefaultNumber("Elevtor Level", 1);
-    } else if (isPOVdown(controlPanel)) { // lvl 2
-      SmartDashboard.setDefaultNumber("Elevator Level", 2);
-    } else if (controlPanel.getRawButton(4)) { // lvl 3
-      SmartDashboard.setDefaultNumber("Elevator Level", 3);
-    }
-  }
-
-  public void autoAlign() {
-    // TODO: Score!
-
-    while (autoAlignEnabled) {
-      if (!turnController.isEnabled()) {
-        turnController.setSetpoint(targetAngle);
-        rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
-        turnController.enable();
-      }
-
-      System.out.println("Angle " + ahrs.getAngle());
-      System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
-
-      if (rotateToAngleRate <= 0.05) { // TODO: Is this right?
-        if (distanceToTarget >= 10) { // TODO: Get real distance.
-          autoAlignEnabled = false;
-          setDriveMotors(0, 0);
-        } else {
-          setDriveMotors(0.1, 0.1);
-        }
-      } else {
-        setDriveMotors(rotateToAngleRate, (rotateToAngleRate * -1));
-      }
-    }
-  }
-
   public void gearShift() {
+    // This method checks what gear shift mode we should be in.
     if (leftStick.getRawButtonReleased(2)) {
       shiftMode = true;
     } else if (rightStick.getRawButtonReleased(2)) {
@@ -275,7 +240,16 @@ public class Robot extends TimedRobot implements PIDOutput {
     return scale;
   }
 
+  public void setDriveMotors(double left, double right) {
+    leftTop.set(left);
+    rightTop.set(right);
+  }
+
+  // Mechs
+
   public void runForebar() {
+    // Code for 4bar mech... nothing too complex.
+
     if (controlPanel.getRawButton(8)) {
       setForebar(0.5);
     } else if (controlPanel.getRawButton(1)) {
@@ -286,6 +260,8 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void setArmPiston(boolean state) {
+    // Code setting the state of the arm pistons.
+
     armPiston.set(state);
   }
 
@@ -300,23 +276,11 @@ public class Robot extends TimedRobot implements PIDOutput {
       isNegative = false;
       speed = 0;
     }
-
-    /*
-     * if (speed == 0) { arm.set(ControlMode.PercentOutput, 0); } else { for (int i
-     * = 0; i <= (speed * 1000); i++) { if (isNegative) {
-     * arm.set(ControlMode.PercentOutput, (i / 1000) * -1); } else {
-     * arm.set(ControlMode.PercentOutput, i / 1000); } Timer.delay(.0001); } }
-     */
   }
 
   public void setClimber(boolean front, boolean back) {
     frontClimb.set(front);
     backClimb.set(back);
-  }
-
-  public void setDriveMotors(double left, double right) {
-    leftTop.set(left);
-    rightTop.set(right);
   }
 
   public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100
@@ -373,20 +337,46 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public boolean isPOVup(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
-    return joystick.getPOV() == 0;
+  // Shuffleboard
+
+  public void displayShuffleboard() {
+    SmartDashboard.putBoolean("Gear Shift", shiftMode);
+
+    if (isPOVup(controlPanel)) { // lvl 1
+      SmartDashboard.setDefaultNumber("Elevtor Level", 1);
+    } else if (isPOVdown(controlPanel)) { // lvl 2
+      SmartDashboard.setDefaultNumber("Elevator Level", 2);
+    } else if (controlPanel.getRawButton(4)) { // lvl 3
+      SmartDashboard.setDefaultNumber("Elevator Level", 3);
+    }
   }
 
-  public boolean isPOVdown(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
-    return joystick.getPOV() == 180;
-  }
+  // Auton
 
-  public boolean isPOVright(Joystick joystick) { // creates boolean for POV right button
-    return joystick.getPOV() == 270;
-  }
+  public void autoAlign() {
+    // TODO: Score!
 
-  public boolean isPOVleft(Joystick joystick) { // creates boolean for POV left button
-    return joystick.getPOV() == 90;
+    while (autoAlignEnabled) {
+      if (!turnController.isEnabled()) {
+        turnController.setSetpoint(targetAngle);
+        rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
+        turnController.enable();
+      }
+
+      System.out.println("Angle " + ahrs.getAngle());
+      System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
+
+      if (rotateToAngleRate <= 0.05) { // TODO: Is this right?
+        if (distanceToTarget >= 10) { // TODO: Get real distance.
+          autoAlignEnabled = false;
+          setDriveMotors(0, 0);
+        } else {
+          setDriveMotors(0.1, 0.1);
+        }
+      } else {
+        setDriveMotors(rotateToAngleRate, (rotateToAngleRate * -1));
+      }
+    }
   }
 
   public void elevatorHeights() {
@@ -417,18 +407,6 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void LimitSwtiches() {
-    if (limitBottomE.get() || limitTopE.get()) {
-      setElevator(0);
-    }
-  }
-
-  /*
-   * public void runElevator() { if (isPOVright(controlPanel)) { setElevator(.75);
-   * } else if (isPOVleft(controlPanel)) { setElevator(-.75); } else {
-   * setElevator(0); } }
-   */
-
   public void forebarAngles() { // runs forebar motor until reaches ideal angle
     // lvl 3
     if (controlPanel.getRawButton(4)) {
@@ -445,6 +423,24 @@ public class Robot extends TimedRobot implements PIDOutput {
         setForebar(0);
       }
     }
+  }
+
+  // Extras: Methods that help us program the robot
+
+  public boolean isPOVup(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
+    return joystick.getPOV() == 0;
+  }
+
+  public boolean isPOVdown(Joystick joystick) { // creates boolean to use later for lvl 1 control panel button
+    return joystick.getPOV() == 180;
+  }
+
+  public boolean isPOVright(Joystick joystick) { // creates boolean for POV right button
+    return joystick.getPOV() == 270;
+  }
+
+  public boolean isPOVleft(Joystick joystick) { // creates boolean for POV left button
+    return joystick.getPOV() == 90;
   }
 
   public static double calculateTotalHeight(double arm_angle) { // Returns inches
