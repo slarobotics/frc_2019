@@ -50,7 +50,11 @@ public class Robot extends TimedRobot implements PIDOutput {
   private CANSparkMax forebar;
 
   // Claw Motors
-  // private TalonSRX claw;
+  private TalonSRX claw;
+
+  // Climber Motors
+  private TalonSRX leftClimb;
+  private TalonSRX rightClimb;
 
   // Gear Shift
   private Solenoid driveTrainShift = new Solenoid(0);
@@ -125,12 +129,12 @@ public class Robot extends TimedRobot implements PIDOutput {
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
     forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
-    // claw = new TalonSRX(0); // TODO: Make sure this # is right
+    claw = new TalonSRX(0); // TODO: Make sure this # is right
 
     // Inits the solenoids
     frontClimb = new Solenoid(3);
     backClimb = new Solenoid(1);
-    // clawPiston = new Solenoid(0);
+    clawPiston = new Solenoid(0);
     nullSetting = new Solenoid(2);
 
     // Inits Vision Pipeline
@@ -172,18 +176,15 @@ public class Robot extends TimedRobot implements PIDOutput {
     runForebar();
     forebarAngles();
     elevatorHeights();
-    setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
-    setClawPiston(controlPanel.getRawButton(7));
+    setClimber(controlPanel.getRawButton(9), controlPanel.getRawButton(7));
+    setClawPiston(controlPanel.getRawButton(5));
     setClawMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
     // Auton
-    if (controlPanel.getRawButtonReleased(4)) {
-      autoAlignEnabled = !autoAlignEnabled;
-      if (autoAlignEnabled) {
-        autoAlign();
-      }
-    }
-
+    /*
+     * if (controlPanel.getRawButtonReleased(2)) { autoAlignEnabled =
+     * !autoAlignEnabled; if (autoAlignEnabled) { autoAlign(); } }
+     */
     // Shuffleboard
     displayShuffleboard();
   }
@@ -255,9 +256,9 @@ public class Robot extends TimedRobot implements PIDOutput {
   public void runForebar() {
     // Code for 4bar mech... nothing too complex.
 
-    if (controlPanel.getRawButton(8)) {
+    if (controlPanel.getRawButton(2)) {
       setForebar(0.5);
-    } else if (controlPanel.getRawButton(1)) {
+    } else if (controlPanel.getRawButton(1)) { // TODO: change button
       setForebar(-0.5);
     } else {
       setForebar(0);
@@ -266,21 +267,27 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void setClawPiston(boolean state) {
     // Code setting the state of the claw pistons.
-
-    // clawPiston.set(state);
+    clawPiston.set(state);
   }
 
   public void setClawMotors(boolean in, boolean out) {
     if (in) {
-      // claw.set(ControlMode.PercentOutput, .75);
+      claw.set(ControlMode.PercentOutput, .75);
     } else if (out) {
-      // claw.set(ControlMode.PercentOutput, -.75);
+      claw.set(ControlMode.PercentOutput, -.75);
     } else {
-      // claw.set(ControlMode.PercentOutput, 0);
+      claw.set(ControlMode.PercentOutput, 0);
     }
   }
 
   public void setClimber(boolean front, boolean back) {
+    if (controlPanel.getRawButton(6)) {
+      leftClimb.set(ControlMode.PercentOutput, .5);
+      rightClimb.set(ControlMode.PercentOutput, .5);
+    } else if (controlPanel.getRawButton(3)) {
+      leftClimb.set(ControlMode.PercentOutput, -.5);
+      rightClimb.set(ControlMode.PercentOutput, -.5);
+    }
     System.out.println(ahrs.getRoll());
     if (front && back) {
       /*
@@ -335,16 +342,12 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void runElevator() { // incremental up/down elevator buttons (temporary, POV buttons not working)
-    if (controlPanel.getRawButton(8)) {
-      setElevator(0.5);
-    } else if (controlPanel.getRawButton(1)) {
-      setElevator(-0.5);
-    } else {
-      setElevator(0);
-    }
-  }
-
+  /*
+   * public void runElevator() { // incremental up/down elevator buttons
+   * (temporary, POV buttons not working) if (controlPanel.getRawButton(8)) {
+   * setElevator(0.5); } else if (controlPanel.getRawButton(1)) {
+   * setElevator(-0.5); } else { setElevator(0); } }
+   */
   public void setElevator(double speed) { // makes elevator motors speed up incrementally so mech doesn't go from 0 to
                                           // 100 and break
     boolean isNegative = false;
