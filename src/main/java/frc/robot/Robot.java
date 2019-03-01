@@ -8,8 +8,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.DigitalOutput;
-import edu.wpi.first.wpilibj.Joystick;
+]import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -110,6 +109,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Limit Switches
   private DigitalInput limitBottomE;
   private DigitalInput limitTopE;
+  private DigitalInput limitForebar;
 
   @Override
   public void robotInit() {
@@ -258,7 +258,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     if (controlPanel.getRawButton(2)) {
       setForebar(0.5);
-    } else if (controlPanel.getRawButton(1)) { // TODO: change button
+    } else if (!limitForebar.get() && controlPanel.getRawButton(1)) { // TODO: change button
       setForebar(-0.5);
     } else {
       setForebar(0);
@@ -288,6 +288,7 @@ public class Robot extends TimedRobot implements PIDOutput {
       leftClimb.set(ControlMode.PercentOutput, -.5);
       rightClimb.set(ControlMode.PercentOutput, -.5);
     }
+
     System.out.println(ahrs.getRoll());
     if (front && back) {
       /*
@@ -450,7 +451,7 @@ public class Robot extends TimedRobot implements PIDOutput {
         System.out.println("motor off");
       }
       // lvl 1
-    } else if (isPOVup(controlPanel)) {
+    } else if (!limitForebar.get() && isPOVup(controlPanel)) {
       setForebar(-.5);
       if (forebar.getEncoder().getPosition() >= -111 && forebar.getEncoder().getPosition() <= -110) {
         setForebar(0);
