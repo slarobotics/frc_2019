@@ -8,11 +8,13 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.SerialPort.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.UsbCamera;
@@ -25,6 +27,7 @@ import com.revrobotics.*;
 
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.Solenoid;
 
 public class Robot extends TimedRobot implements PIDOutput {
@@ -46,8 +49,8 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Forebar Motors
   private CANSparkMax forebar;
 
-  // Arm Motors
-  // private TalonSRX arm;
+  // Claw Motors
+  // private TalonSRX claw;
 
   // Gear Shift
   private Solenoid driveTrainShift = new Solenoid(0);
@@ -55,9 +58,10 @@ public class Robot extends TimedRobot implements PIDOutput {
   // Climber Piston
   private Solenoid frontClimb;
   private Solenoid backClimb;
+  private Solenoid nullSetting;
 
-  // Arm Pistons
-  private Solenoid armPiston;
+  // Claw Pistons
+  private Solenoid clawPiston;
 
   // Gyro
   private AHRS ahrs;
@@ -121,12 +125,13 @@ public class Robot extends TimedRobot implements PIDOutput {
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
     forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
-    // arm = new TalonSRX(0); // TODO: Make sure this # is right
+    // claw = new TalonSRX(0); // TODO: Make sure this # is right
 
     // Inits the solenoids
     frontClimb = new Solenoid(3);
     backClimb = new Solenoid(1);
-    armPiston = new Solenoid(2);
+    // clawPiston = new Solenoid(0);
+    nullSetting = new Solenoid(2);
 
     // Inits Vision Pipeline
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
@@ -144,7 +149,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     // Inits Gyro
     try {
-      ahrs = new AHRS(SPI.Port.kMXP);
+      ahrs = new AHRS(SerialPort.Port.kUSB);
     } catch (RuntimeException ex) {
       System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
     }
@@ -168,8 +173,8 @@ public class Robot extends TimedRobot implements PIDOutput {
     forebarAngles();
     elevatorHeights();
     setClimber(controlPanel.getRawButton(6), controlPanel.getRawButton(3));
-    setArmPiston(controlPanel.getRawButton(7));
-    setArmMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
+    setClawPiston(controlPanel.getRawButton(7));
+    setClawMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
 
     // Auton
     if (controlPanel.getRawButtonReleased(4)) {
@@ -259,28 +264,53 @@ public class Robot extends TimedRobot implements PIDOutput {
     }
   }
 
-  public void setArmPiston(boolean state) {
-    // Code setting the state of the arm pistons.
+  public void setClawPiston(boolean state) {
+    // Code setting the state of the claw pistons.
 
-    armPiston.set(state);
+    // clawPiston.set(state);
   }
 
-  public void setArmMotors(boolean in, boolean out) {
-    boolean isNegative;
-    double speed = .75;
+  public void setClawMotors(boolean in, boolean out) {
     if (in) {
-      isNegative = false;
+      // claw.set(ControlMode.PercentOutput, .75);
     } else if (out) {
-      isNegative = true;
+      // claw.set(ControlMode.PercentOutput, -.75);
     } else {
-      isNegative = false;
-      speed = 0;
+      // claw.set(ControlMode.PercentOutput, 0);
     }
   }
 
   public void setClimber(boolean front, boolean back) {
-    frontClimb.set(front);
-    backClimb.set(back);
+    System.out.println(ahrs.getRoll());
+    if (front && back) {
+      /*
+       * if (ahrs.getRoll() < -15) { frontClimb.set(true); backClimb.set(false); }
+       * else
+       */
+      if (ahrs.getRoll() > 1.5) { // 1.5 is my fav num.... fight me
+        frontClimb.set(true);
+        nullSetting.set(true);
+        backClimb.set(true);
+      } else {
+        frontClimb.set(true);
+        nullSetting.set(false);
+        backClimb.set(true);
+      }
+    } else {
+      if (front) {
+        frontClimb.set(true);
+        backClimb.set(false);
+        nullSetting.set(false);
+      } else if (back) {
+        frontClimb.set(false);
+        backClimb.set(true);
+        nullSetting.set(true);
+      } else {
+        frontClimb.set(false);
+        backClimb.set(false);
+        nullSetting.set(false);
+      }
+    }
   }
 
   public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100
@@ -381,23 +411,23 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void elevatorHeights() {
     // This is for the elevator up button
-    if (isPOVright(controlPanel)) {
+    if (!limitTopE.get() && isPOVright(controlPanel)) {
       System.out.println("up button");
       setElevator(.5);
     }
     // This is for the elevator down button
-    else if (isPOVleft(controlPanel)) {
+    else if (!limitBottomE.get() && isPOVleft(controlPanel)) {
       System.out.println("down button");
       setElevator(-.5);
     }
     // This is the lvl 2 button
-    else if (isPOVdown(controlPanel)) {
+    else if (!limitTopE.get() && isPOVdown(controlPanel)) {
       setElevator(.5);
       if (elevator.getEncoder().getPosition() >= 69 && elevator.getEncoder().getPosition() <= 70) {
         setElevator(0);
       }
       // This is the lvl 3 button
-    } else if (controlPanel.getRawButton(4)) {
+    } else if (!limitTopE.get() && controlPanel.getRawButton(4)) {
       setElevator(.5);
       if (elevator.getEncoder().getPosition() >= 95 && elevator.getEncoder().getPosition() <= 96) {
         setElevator(0);
@@ -443,18 +473,18 @@ public class Robot extends TimedRobot implements PIDOutput {
     return joystick.getPOV() == 90;
   }
 
-  public static double calculateTotalHeight(double arm_angle) { // Returns inches
+  public static double calculateTotalHeight(double forebar_angle) { // Returns inches
     // This function assumes that we are perfectly mounted at 90 degrees at the
     // start going up and down at that point
 
     // Constants in inches
-    double arm_width = 3.633; // Width of arm mechanism
-    double arm_length = 44.59; // length of arm mechanism
+    double forebar_width = 3.633; // Width of forebar mechanism
+    double forebar_length = 44.59; // length of forebar mechanism
     int elevator_height = 56; // height of elevator mechanism
     int elevator_width = 17; // width of elevator mechanism
 
-    return (Math.sin(Math.toRadians(arm_angle)) * (arm_length - elevator_width)) + (elevator_height - arm_width)
-        + arm_width;
+    return (Math.sin(Math.toRadians(forebar_angle)) * (forebar_length - elevator_width))
+        + (elevator_height - forebar_width) + forebar_width;
   }
 
   @Override
