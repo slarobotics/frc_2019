@@ -76,7 +76,7 @@ public class Robot extends TimedRobot implements PIDOutput {
   // CameraServer.getInstance().startAutomaticCapture("intake",
   // "/dev/v4l/by-path/platform-ci_hdrc.0-usb-0:1.1:1.0-video-index0");
 
-  private UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+  private UsbCamera camera;
   private CvSource outputStream;
   private VisionThread gripPipeline;
   private final Object imgLock = new Object();
@@ -111,6 +111,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   @Override
   public void robotInit() {
+    // Inits camera
+    camera = CameraServer.getInstance().startAutomaticCapture();
+
     // Inits the Joysticks
     leftStick = new Joystick(0);
     rightStick = new Joystick(1);
@@ -183,6 +186,7 @@ public class Robot extends TimedRobot implements PIDOutput {
      * if (controlPanel.getRawButtonReleased(2)) { autoAlignEnabled =
      * !autoAlignEnabled; if (autoAlignEnabled) { autoAlign(); } }
      */
+
     // Shuffleboard
     displayShuffleboard();
   }
@@ -256,7 +260,7 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     if (controlPanel.getRawButton(2)) {
       setForebar(0.5);
-    } else if (!limitForebar.get() && controlPanel.getRawButton(1)) { // TODO: change button
+    } else if (!limitForebar.get() && controlPanel.getRawButton(10)) {
       setForebar(-0.5);
     } else {
       setForebar(0);
