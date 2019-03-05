@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -54,12 +55,13 @@ public class Robot extends TimedRobot implements PIDOutput {
   private TalonSRX rightClimb;
 
   // Gear Shift
-  private Solenoid driveTrainShift = new Solenoid(0);
+  private Solenoid driveTrainShift;
 
   // Climber Piston
   private Solenoid frontClimb;
   private Solenoid backClimb;
-  private Solenoid nullSetting;
+  private Solenoid nullSettingFront;
+  private Solenoid nullSettingBack;
 
   // Claw Pistons
   private Solenoid clawPiston;
@@ -131,12 +133,21 @@ public class Robot extends TimedRobot implements PIDOutput {
     forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
     claw = new TalonSRX(0); // TODO: Make sure this # is right
+    leftClimb = new TalonSRX(1);
+    rightClimb = new TalonSRX(2);
+
+    // Limit Switches
+    limitTopE = new DigitalInput(0);
+    limitBottomE = new DigitalInput(1);
+    limitForebar = new DigitalInput(2);
 
     // Inits the solenoids
-    frontClimb = new Solenoid(3);
-    backClimb = new Solenoid(1);
-    clawPiston = new Solenoid(0);
-    nullSetting = new Solenoid(2);
+    frontClimb = new Solenoid(4);
+    backClimb = new Solenoid(3);
+    clawPiston = new Solenoid(1);
+    nullSettingFront = new Solenoid(2);
+    nullSettingBack = new Solenoid(5));
+    driveTrainShift = new Solenoid(0);
 
     // Inits Vision Pipeline
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
@@ -154,7 +165,8 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     // Inits Gyro
     try {
-      ahrs = new AHRS(SerialPort.Port.kUSB);
+      ahrs = new AHRS(SPI.Port.kMXP);
+      // ahrs = new AHRS(SerialPort.Port.kUSB);
     } catch (RuntimeException ex) {
       System.out.println("Error instantiating navX-MXP:  " + ex.getMessage());
     }
@@ -259,11 +271,11 @@ public class Robot extends TimedRobot implements PIDOutput {
     // Code for 4bar mech... nothing too complex.
 
     if (controlPanel.getRawButton(2)) {
-      setForebar(0.5);
+      forebar.set(0.5);
     } else if (!limitForebar.get() && controlPanel.getRawButton(10)) {
-      setForebar(-0.5);
+      forebar.set(-0.5);
     } else {
-      setForebar(0);
+      forebar.set(0);
     }
   }
 
@@ -284,41 +296,45 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void setClimber(boolean front, boolean back) {
     if (controlPanel.getRawButton(6)) {
-      leftClimb.set(ControlMode.PercentOutput, .5);
-      rightClimb.set(ControlMode.PercentOutput, .5);
+      System.out.println("go forward");
+      leftClimb.set(ControlMode.PercentOutput, .20);
+      rightClimb.set(ControlMode.PercentOutput, .20);
     } else if (controlPanel.getRawButton(3)) {
-      leftClimb.set(ControlMode.PercentOutput, -.5);
-      rightClimb.set(ControlMode.PercentOutput, -.5);
+      System.out.println("go backwards");
+      leftClimb.set(ControlMode.PercentOutput, -.20);
+      rightClimb.set(ControlMode.PercentOutput, -.20);
+    } else {
+      leftClimb.set(ControlMode.PercentOutput, 0);
+      rightClimb.set(ControlMode.PercentOutput, 0);
     }
 
-    System.out.println(ahrs.getRoll());
-    if (front && back) {
-      /*
-       * if (ahrs.getRoll() < -15) { frontClimb.set(true); backClimb.set(false); }
-       * else
-       */
+    if (!front && !back) {
+      nullSettingBack.set(false);
       if (ahrs.getRoll() > 1.5) { // 1.5 is my fav num.... fight me
         frontClimb.set(true);
-        nullSetting.set(true);
+        nullSettingFront.set(true);
         backClimb.set(true);
       } else {
         frontClimb.set(true);
-        nullSetting.set(false);
+        nullSettingFront.set(false);
         backClimb.set(true);
       }
     } else {
-      if (front) {
+      if (!front) {
         frontClimb.set(true);
         backClimb.set(false);
-        nullSetting.set(false);
-      } else if (back) {
+        nullSettingFront.set(false);
+        nullSettingBack.set(true);
+      } else if (!back) {
         frontClimb.set(false);
         backClimb.set(true);
-        nullSetting.set(true);
+        nullSettingFront.set(true);
+        nullSettingBack.set(false);
       } else {
         frontClimb.set(false);
         backClimb.set(false);
-        nullSetting.set(false);
+        nullSettingFront.set(true);
+        nullSettingBack.set(true);
       }
     }
   }
@@ -416,21 +432,27 @@ public class Robot extends TimedRobot implements PIDOutput {
   }
 
   public void elevatorHeights() {
+    if (limitTopE.get()) {
+      System.out.print("Top Limit Switch");
+    } else if (limitBottomE.get()) {
+      System.out.print("Bottom Limit Switch");
+    }
+
     // This is for the elevator up button
-    if (!limitTopE.get() && isPOVright(controlPanel)) {
+    if (!limitBottomE.get() && isPOVright(controlPanel)) {
       System.out.println("up button");
-      setElevator(.5);
+      elevator.set(.5);
     }
     // This is for the elevator down button
-    else if (!limitBottomE.get() && isPOVleft(controlPanel)) {
+    else if (!limitTopE.get() && isPOVleft(controlPanel)) {
       System.out.println("down button");
-      setElevator(-.5);
+      elevator.set(-.5);
     }
     // This is the lvl 2 button
     else if (!limitTopE.get() && isPOVdown(controlPanel)) {
-      setElevator(.5);
+      elevator.set(.5);
       if (elevator.getEncoder().getPosition() >= 69 && elevator.getEncoder().getPosition() <= 70) {
-        setElevator(0);
+        elevator.set(0);
       }
       // This is the lvl 3 button
     } else if (!limitTopE.get() && controlPanel.getRawButton(4)) {
