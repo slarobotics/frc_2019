@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
@@ -63,8 +64,14 @@ public class Robot extends TimedRobot implements PIDOutput {
   private Solenoid nullSettingFront;
   private Solenoid nullSettingBack;
 
+  // Climber Pause
+  private boolean climberPause;
+
   // Claw Pistons
   private Solenoid clawPiston;
+
+  // Preasure Reading
+  private AnalogInput preasureRead;
 
   // Gyro
   private AHRS ahrs;
@@ -132,22 +139,25 @@ public class Robot extends TimedRobot implements PIDOutput {
     elevator = new CANSparkMax(6, CANSparkMaxLowLevel.MotorType.kBrushless); // under elevator
     forebar = new CANSparkMax(12, CANSparkMaxLowLevel.MotorType.kBrushless); //
 
-    claw = new TalonSRX(0); // TODO: Make sure this # is right
+    claw = new TalonSRX(2);
     leftClimb = new TalonSRX(1);
-    rightClimb = new TalonSRX(2);
+    rightClimb = new TalonSRX(0);
 
     // Limit Switches
-    limitTopE = new DigitalInput(0);
-    limitBottomE = new DigitalInput(1);
-    limitForebar = new DigitalInput(2);
+    limitTopE = new DigitalInput(2);
+    limitBottomE = new DigitalInput(0);
+    limitForebar = new DigitalInput(1);
 
     // Inits the solenoids
     frontClimb = new Solenoid(4);
     backClimb = new Solenoid(3);
     clawPiston = new Solenoid(1);
     nullSettingFront = new Solenoid(2);
-    nullSettingBack = new Solenoid(5));
+    nullSettingBack = new Solenoid(5);
     driveTrainShift = new Solenoid(0);
+
+    // Inits preasure reader
+    preasureRead = new AnalogInput(0);
 
     // Inits Vision Pipeline
     outputStream = CameraServer.getInstance().putVideo("overlay", 320, 240);
@@ -187,17 +197,10 @@ public class Robot extends TimedRobot implements PIDOutput {
 
     // Mechs
     runForebar();
-    forebarAngles();
     elevatorHeights();
     setClimber(controlPanel.getRawButton(9), controlPanel.getRawButton(7));
     setClawPiston(controlPanel.getRawButton(5));
-    setClawMotors(controlPanel.getRawButton(8), controlPanel.getRawButton(1));
-
-    // Auton
-    /*
-     * if (controlPanel.getRawButtonReleased(2)) { autoAlignEnabled =
-     * !autoAlignEnabled; if (autoAlignEnabled) { autoAlign(); } }
-     */
+    setClawMotors(controlPanel.getRawButton(1), controlPanel.getRawButton(8));
 
     // Shuffleboard
     displayShuffleboard();
@@ -271,9 +274,9 @@ public class Robot extends TimedRobot implements PIDOutput {
     // Code for 4bar mech... nothing too complex.
 
     if (controlPanel.getRawButton(2)) {
-      forebar.set(0.5);
-    } else if (!limitForebar.get() && controlPanel.getRawButton(10)) {
-      forebar.set(-0.5);
+      forebar.set(1.0);
+    } else if (controlPanel.getRawButton(10)) {
+      forebar.set(-1.0);
     } else {
       forebar.set(0);
     }
@@ -286,9 +289,9 @@ public class Robot extends TimedRobot implements PIDOutput {
 
   public void setClawMotors(boolean in, boolean out) {
     if (in) {
-      claw.set(ControlMode.PercentOutput, .75);
+      claw.set(ControlMode.PercentOutput, .4);
     } else if (out) {
-      claw.set(ControlMode.PercentOutput, -.75);
+      claw.set(ControlMode.PercentOutput, -.4);
     } else {
       claw.set(ControlMode.PercentOutput, 0);
     }
@@ -297,96 +300,60 @@ public class Robot extends TimedRobot implements PIDOutput {
   public void setClimber(boolean front, boolean back) {
     if (controlPanel.getRawButton(6)) {
       System.out.println("go forward");
-      leftClimb.set(ControlMode.PercentOutput, .20);
-      rightClimb.set(ControlMode.PercentOutput, .20);
+      leftClimb.set(ControlMode.PercentOutput, .35);
+      rightClimb.set(ControlMode.PercentOutput, .35);
     } else if (controlPanel.getRawButton(3)) {
       System.out.println("go backwards");
-      leftClimb.set(ControlMode.PercentOutput, -.20);
-      rightClimb.set(ControlMode.PercentOutput, -.20);
+      leftClimb.set(ControlMode.PercentOutput, -.35);
+      rightClimb.set(ControlMode.PercentOutput, -.35);
     } else {
       leftClimb.set(ControlMode.PercentOutput, 0);
       rightClimb.set(ControlMode.PercentOutput, 0);
     }
 
-    if (!front && !back) {
+    if (controlPanel.getRawButtonReleased(4)) {
+      if (front && back) {
+
+      } else {
+        nullSettingFront.set(true);
+        nullSettingBack.set(true);
+      }
+    } else {
+      nullSettingFront.set(false);
       nullSettingBack.set(false);
-      if (ahrs.getRoll() > 1.5) { // 1.5 is my fav num.... fight me
-        frontClimb.set(true);
-        nullSettingFront.set(true);
-        backClimb.set(true);
+
+      if (front && back) {
+        if (ahrs.getRoll() > 1.5) { // 1.5 is my fav num.... fight me
+          frontClimb.set(true);
+          nullSettingBack.set(false);
+          nullSettingFront.set(true);
+          backClimb.set(true);
+        } else {
+          frontClimb.set(true);
+          nullSettingBack.set(false);
+
+          nullSettingFront.set(false);
+          backClimb.set(true);
+        }
       } else {
-        frontClimb.set(true);
-        nullSettingFront.set(false);
-        backClimb.set(true);
-      }
-    } else {
-      if (!front) {
-        frontClimb.set(true);
-        backClimb.set(false);
-        nullSettingFront.set(false);
-        nullSettingBack.set(true);
-      } else if (!back) {
-        frontClimb.set(false);
-        backClimb.set(true);
-        nullSettingFront.set(true);
         nullSettingBack.set(false);
-      } else {
-        frontClimb.set(false);
-        backClimb.set(false);
-        nullSettingFront.set(true);
-        nullSettingBack.set(true);
+        nullSettingFront.set(false);
+        if (front) {
+          frontClimb.set(true);
+          backClimb.set(false);
+        } else if (back) {
+          frontClimb.set(false);
+          backClimb.set(true);
+        } else {
+          frontClimb.set(false);
+          backClimb.set(false);
+        }
       }
     }
   }
 
-  public void setForebar(double speed) { // makes forebar motors speed up incrementally so mech doesn't go from 0 to 100
-                                         // and break
-    boolean isNegative = false;
-    if (speed < 0) {
-      isNegative = true;
-      speed = speed * -1;
-    }
-
-    if (speed == 0) {
-      forebar.set(0);
-    } else {
-      for (int i = 0; i <= (speed * 1000); i++) {
-        if (isNegative) {
-          forebar.set((i / 1000) * -1);
-        } else {
-          forebar.set(i / 1000);
-        }
-        Timer.delay(.0001);
-      }
-    }
-  }
-
-  /*
-   * public void runElevator() { // incremental up/down elevator buttons
-   * (temporary, POV buttons not working) if (controlPanel.getRawButton(8)) {
-   * setElevator(0.5); } else if (controlPanel.getRawButton(1)) {
-   * setElevator(-0.5); } else { setElevator(0); } }
-   */
-  public void setElevator(double speed) { // makes elevator motors speed up incrementally so mech doesn't go from 0 to
-                                          // 100 and break
-    boolean isNegative = false;
-    if (speed < 0) {
-      isNegative = true;
-      speed = speed * -1;
-    }
-
-    if (speed == 0) {
-      elevator.set(0);
-    } else {
-      for (int i = 0; i <= (speed * 1000); i++) {
-        if (isNegative) {
-          elevator.set((i / 1000) * -1);
-        } else {
-          elevator.set(i / 1000);
-        }
-        Timer.delay(.0001);
-      }
-    }
+  public double readPreasure() {
+    return 250.0 * preasureRead.getVoltage() / 5.0 - 25.0;
   }
 
   // Shuffleboard
@@ -398,88 +365,29 @@ public class Robot extends TimedRobot implements PIDOutput {
       SmartDashboard.setDefaultNumber("Elevtor Level", 1);
     } else if (isPOVdown(controlPanel)) { // lvl 2
       SmartDashboard.setDefaultNumber("Elevator Level", 2);
-    } else if (controlPanel.getRawButton(4)) { // lvl 3
-      SmartDashboard.setDefaultNumber("Elevator Level", 3);
     }
+
+    SmartDashboard.putNumber("Preasure", readPreasure());
   }
 
   // Auton
 
-  public void autoAlign() {
-    // TODO: Score!
-
-    while (autoAlignEnabled) {
-      if (!turnController.isEnabled()) {
-        turnController.setSetpoint(targetAngle);
-        rotateToAngleRate = 0; // This value will be updated in the pidWrite() method.
-        turnController.enable();
-      }
-
-      System.out.println("Angle " + ahrs.getAngle());
-      System.out.println("left: " + rotateToAngleRate + " right: " + (rotateToAngleRate * -1));
-
-      if (rotateToAngleRate <= 0.05) { // TODO: Is this right?
-        if (distanceToTarget >= 10) { // TODO: Get real distance.
-          autoAlignEnabled = false;
-          setDriveMotors(0, 0);
-        } else {
-          setDriveMotors(0.1, 0.1);
-        }
-      } else {
-        setDriveMotors(rotateToAngleRate, (rotateToAngleRate * -1));
-      }
-    }
-  }
-
   public void elevatorHeights() {
-    if (limitTopE.get()) {
-      System.out.print("Top Limit Switch");
-    } else if (limitBottomE.get()) {
+    if (limitBottomE.get()) {
       System.out.print("Bottom Limit Switch");
     }
 
     // This is for the elevator up button
-    if (!limitBottomE.get() && isPOVright(controlPanel)) {
+    if (isPOVright(controlPanel)) {
       System.out.println("up button");
-      elevator.set(.5);
+      elevator.set(-.35);
     }
     // This is for the elevator down button
-    else if (!limitTopE.get() && isPOVleft(controlPanel)) {
+    else if (isPOVleft(controlPanel)) {
       System.out.println("down button");
-      elevator.set(-.5);
-    }
-    // This is the lvl 2 button
-    else if (!limitTopE.get() && isPOVdown(controlPanel)) {
-      elevator.set(.5);
-      if (elevator.getEncoder().getPosition() >= 69 && elevator.getEncoder().getPosition() <= 70) {
-        elevator.set(0);
-      }
-      // This is the lvl 3 button
-    } else if (!limitTopE.get() && controlPanel.getRawButton(4)) {
-      setElevator(.5);
-      if (elevator.getEncoder().getPosition() >= 95 && elevator.getEncoder().getPosition() <= 96) {
-        setElevator(0);
-      }
+      elevator.set(.35);
     } else {
-      setElevator(0);
-    }
-  }
-
-  public void forebarAngles() { // runs forebar motor until reaches ideal angle
-    // lvl 3
-    if (controlPanel.getRawButton(4)) {
-      setForebar(.5);
-      System.out.println("button pressed, motor on");
-      if (forebar.getEncoder().getPosition() >= 215 && forebar.getEncoder().getPosition() <= 216) {
-        setForebar(0);
-        System.out.println("motor off");
-      }
-      // lvl 1
-    } else if (!limitForebar.get() && isPOVup(controlPanel)) {
-      setForebar(-.5);
-      if (forebar.getEncoder().getPosition() >= -111 && forebar.getEncoder().getPosition() <= -110) {
-        setForebar(0);
-      }
+      elevator.set(0);
     }
   }
 
